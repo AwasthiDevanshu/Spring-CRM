@@ -1,0 +1,4 @@
+firstName,lastName,email,phone,company,jobTitle,status,source,score,notes
+John,Doe,john.doe@example.com,+1-555-0123,Acme Corp,CEO,NEW,WEBSITE,85,Interested in our premium package
+Jane,Smith,jane.smith@tech.com,+1-555-0124,Tech Solutions,CTO,CONTACTED,EMAIL,75,Follow up next week
+Bob,Johnson,bob.j@startup.io,+1-555-0125,Startup Inc,Founder,QUALIFIED,PHONE,90,High priority lead

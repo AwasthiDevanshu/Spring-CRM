@@ -1,0 +1,4 @@
+firstName,lastName,email,phone,company,jobTitle,status,source,score,notes
+Alice,Johnson,alice.johnson@newcorp.com,+1-555-1001,New Corp,Manager,NEW,WEBSITE,80,New lead from website
+Bob,Wilson,bob.wilson@startup.com,+1-555-1002,Startup Inc,CEO,CONTACTED,EMAIL,90,High priority lead
+Carol,Davis,carol.davis@tech.com,+1-555-1003,Tech Solutions,CTO,QUALIFIED,PHONE,85,Interested in our services

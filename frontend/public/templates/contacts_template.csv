@@ -1,0 +1,4 @@
+firstName,lastName,email,phone,company,jobTitle,status,notes
+Alice,Williams,alice.w@company.com,+1-555-0126,Big Corp,Manager,ACTIVE,Regular customer
+Charlie,Brown,charlie.b@enterprise.com,+1-555-0127,Enterprise Ltd,Director,ACTIVE,Decision maker
+Diana,Wilson,diana.w@business.com,+1-555-0128,Business Inc,VP,ACTIVE,Key stakeholder

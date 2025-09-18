@@ -1,0 +1,65 @@
+spring:
+  application:
+    name: enterprise-crm
+  profiles:
+    active: dev
+  
+  # Database Configuration
+  datasource:
+    url: jdbc:mysql://94.250.203.219:3306/crm?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+    username: crm
+    password: Xi3LtPT3KD53tCyz
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 5
+      idle-timeout: 300000
+      connection-timeout: 20000
+      max-lifetime: 600000
+      leak-detection-threshold: 60000
+  
+  # SQL Initialization
+  sql:
+    init:
+      mode: always
+      continue-on-error: true
+      platform: mysql
+
+server:
+  port: 8080
+  servlet:
+    context-path: /crm
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: always
+
+logging:
+  level:
+    com.crm.enterprise: DEBUG
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
+
+# Feature flags - set to true to enable advanced features
+features:
+  oauth2: false
+  redis: false
+  email: false
+  file-upload: false
+  advanced-security: false
+  database: true
+
+# Swagger/OpenAPI Configuration
+springdoc:
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    operationsSorter: method
+    tagsSorter: alpha
+  packages-to-scan: com.crm.enterprise.controller
