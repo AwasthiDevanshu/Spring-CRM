@@ -4,10 +4,12 @@ import com.crm.enterprise.dto.UserCreateRequest
 import com.crm.enterprise.dto.UserResponse
 import com.crm.enterprise.dto.UserUpdateRequest
 import com.crm.enterprise.service.UserService
+import com.crm.enterprise.util.RequestUtils
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.Parameter
 import io.swagger.v3.oas.annotations.responses.ApiResponse
 import io.swagger.v3.oas.annotations.tags.Tag
+import jakarta.servlet.http.HttpServletRequest
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
 
@@ -15,7 +17,8 @@ import org.springframework.web.bind.annotation.*
 @RequestMapping("/crm/api/users")
 @Tag(name = "User Management", description = "APIs for managing users within a company")
 class UserController(
-    private val userService: UserService
+    private val userService: UserService,
+    private val requestUtils: RequestUtils
 ) {
 
     @GetMapping
@@ -25,9 +28,12 @@ class UserController(
             ApiResponse(responseCode = "401", description = "Unauthorized")
         ])
     fun getUsers(
-        @Parameter(description = "Company ID", required = true)
-        @RequestParam companyId: Long
+        request: HttpServletRequest
     ): ResponseEntity<List<UserResponse>> {
+        val companyId = requestUtils.extractCompanyIdFromToken(request)
+        if (companyId == null) {
+            return ResponseEntity.badRequest().build()
+        }
         val users = userService.findUsersByCompanyId(companyId)
         return ResponseEntity.ok(users)
     }
@@ -42,9 +48,12 @@ class UserController(
     fun getUser(
         @Parameter(description = "User ID", required = true)
         @PathVariable id: Long,
-        @Parameter(description = "Company ID", required = true)
-        @RequestParam companyId: Long
+        request: HttpServletRequest
     ): ResponseEntity<UserResponse> {
+        val companyId = requestUtils.extractCompanyIdFromToken(request)
+        if (companyId == null) {
+            return ResponseEntity.badRequest().build()
+        }
         val user = userService.findByIdAndCompanyId(id, companyId)
         return if (user != null) {
             ResponseEntity.ok(user)
@@ -63,9 +72,12 @@ class UserController(
     fun createUser(
         @Parameter(description = "User creation request", required = true)
         @RequestBody userRequest: UserCreateRequest,
-        @Parameter(description = "Company ID", required = true)
-        @RequestParam companyId: Long
+        request: HttpServletRequest
     ): ResponseEntity<UserResponse> {
+        val companyId = requestUtils.extractCompanyIdFromToken(request)
+        if (companyId == null) {
+            return ResponseEntity.badRequest().build()
+        }
         val user = userService.createUser(userRequest, companyId)
         return ResponseEntity.status(201).body(user)
     }
@@ -83,9 +95,12 @@ class UserController(
         @PathVariable id: Long,
         @Parameter(description = "User update request", required = true)
         @RequestBody updateRequest: UserUpdateRequest,
-        @Parameter(description = "Company ID", required = true)
-        @RequestParam companyId: Long
+        request: HttpServletRequest
     ): ResponseEntity<UserResponse> {
+        val companyId = requestUtils.extractCompanyIdFromToken(request)
+        if (companyId == null) {
+            return ResponseEntity.badRequest().build()
+        }
         val updatedUser = userService.updateUser(id, updateRequest, companyId)
         return if (updatedUser != null) {
             ResponseEntity.ok(updatedUser)
@@ -105,9 +120,12 @@ class UserController(
     fun deleteUser(
         @Parameter(description = "User ID", required = true)
         @PathVariable id: Long,
-        @Parameter(description = "Company ID", required = true)
-        @RequestParam companyId: Long
+        request: HttpServletRequest
     ): ResponseEntity<Void> {
+        val companyId = requestUtils.extractCompanyIdFromToken(request)
+        if (companyId == null) {
+            return ResponseEntity.badRequest().build()
+        }
         val deleted = userService.deleteUser(id, companyId)
         return if (deleted) {
             ResponseEntity.noContent().build()
@@ -126,9 +144,12 @@ class UserController(
     fun activateUser(
         @Parameter(description = "User ID", required = true)
         @PathVariable id: Long,
-        @Parameter(description = "Company ID", required = true)
-        @RequestParam companyId: Long
+        request: HttpServletRequest
     ): ResponseEntity<UserResponse> {
+        val companyId = requestUtils.extractCompanyIdFromToken(request)
+        if (companyId == null) {
+            return ResponseEntity.badRequest().build()
+        }
         val user = userService.activateUser(id, companyId)
         return if (user != null) {
             ResponseEntity.ok(user)
@@ -147,9 +168,12 @@ class UserController(
     fun deactivateUser(
         @Parameter(description = "User ID", required = true)
         @PathVariable id: Long,
-        @Parameter(description = "Company ID", required = true)
-        @RequestParam companyId: Long
+        request: HttpServletRequest
     ): ResponseEntity<UserResponse> {
+        val companyId = requestUtils.extractCompanyIdFromToken(request)
+        if (companyId == null) {
+            return ResponseEntity.badRequest().build()
+        }
         val user = userService.deactivateUser(id, companyId)
         return if (user != null) {
             ResponseEntity.ok(user)

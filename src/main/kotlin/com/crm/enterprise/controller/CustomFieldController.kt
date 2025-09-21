@@ -5,6 +5,7 @@ import com.crm.enterprise.dto.CustomFieldRequest
 import com.crm.enterprise.dto.CustomFieldResponse
 import com.crm.enterprise.dto.CustomFieldUpdateRequest
 import com.crm.enterprise.service.CustomFieldService
+import com.crm.enterprise.util.RequestUtils
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.Parameter
 import io.swagger.v3.oas.annotations.media.Content
@@ -12,6 +13,8 @@ import io.swagger.v3.oas.annotations.media.Schema
 import io.swagger.v3.oas.annotations.responses.ApiResponse
 import io.swagger.v3.oas.annotations.responses.ApiResponses
 import io.swagger.v3.oas.annotations.tags.Tag
+import jakarta.servlet.http.HttpServletRequest
+import org.slf4j.LoggerFactory
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
 
@@ -19,8 +22,11 @@ import org.springframework.web.bind.annotation.*
 @RequestMapping("/api/custom-fields")
 @Tag(name = "Custom Fields Management", description = "Custom field management endpoints for creating, reading, updating, and deleting custom fields")
 class CustomFieldController(
-    private val customFieldService: CustomFieldService
+    private val customFieldService: CustomFieldService,
+    private val requestUtils: RequestUtils
 ) {
+    
+    private val logger = LoggerFactory.getLogger(CustomFieldController::class.java)
 
     @GetMapping("/configuration/{entityType}")
     @Operation(
@@ -39,9 +45,12 @@ class CustomFieldController(
     fun getFieldConfiguration(
         @Parameter(description = "Entity type (LEAD, CONTACT, DEAL, etc.)", required = true)
         @PathVariable entityType: String,
-        @Parameter(description = "Company ID", required = true)
-        @RequestParam companyId: Long
+        request: HttpServletRequest
     ): ResponseEntity<CustomFieldConfiguration> {
+        val companyId = requestUtils.extractCompanyIdFromToken(request)
+        if (companyId == null) {
+            return ResponseEntity.badRequest().build()
+        }
         val configuration = customFieldService.getFieldConfiguration(companyId, entityType)
         return ResponseEntity.ok(configuration)
     }
@@ -61,9 +70,12 @@ class CustomFieldController(
         ]
     )
     fun getAllCustomFields(
-        @Parameter(description = "Company ID", required = true)
-        @RequestParam companyId: Long
+        request: HttpServletRequest
     ): ResponseEntity<List<CustomFieldResponse>> {
+        val companyId = requestUtils.extractCompanyIdFromToken(request)
+        if (companyId == null) {
+            return ResponseEntity.badRequest().build()
+        }
         val fields = customFieldService.getAllCustomFields(companyId)
         return ResponseEntity.ok(fields)
     }
@@ -89,9 +101,12 @@ class CustomFieldController(
     fun getCustomField(
         @Parameter(description = "Custom field ID", required = true)
         @PathVariable id: Long,
-        @Parameter(description = "Company ID", required = true)
-        @RequestParam companyId: Long
+        request: HttpServletRequest
     ): ResponseEntity<CustomFieldResponse> {
+        val companyId = requestUtils.extractCompanyIdFromToken(request)
+        if (companyId == null) {
+            return ResponseEntity.badRequest().build()
+        }
         val field = customFieldService.getCustomFieldById(id, companyId)
         return if (field != null) {
             ResponseEntity.ok(field)
@@ -121,15 +136,17 @@ class CustomFieldController(
     fun createCustomField(
         @Parameter(description = "Custom field information", required = true)
         @RequestBody request: CustomFieldRequest,
-        @Parameter(description = "Company ID", required = true)
-        @RequestParam companyId: Long
+        httpRequest: HttpServletRequest
     ): ResponseEntity<CustomFieldResponse> {
         return try {
+            val companyId = requestUtils.extractCompanyIdFromToken(httpRequest)
+            if (companyId == null) {
+                return ResponseEntity.badRequest().build()
+            }
             val field = customFieldService.createCustomField(request, companyId)
             ResponseEntity.ok(field)
         } catch (e: Exception) {
-            println("Error creating custom field: ${e.message}")
-            e.printStackTrace()
+            logger.error("Error creating custom field: {}", e.message, e)
             ResponseEntity.badRequest().build()
         }
     }
@@ -157,9 +174,12 @@ class CustomFieldController(
         @PathVariable id: Long,
         @Parameter(description = "Updated custom field information", required = true)
         @RequestBody request: CustomFieldUpdateRequest,
-        @Parameter(description = "Company ID", required = true)
-        @RequestParam companyId: Long
+        httpRequest: HttpServletRequest
     ): ResponseEntity<CustomFieldResponse> {
+        val companyId = requestUtils.extractCompanyIdFromToken(httpRequest)
+        if (companyId == null) {
+            return ResponseEntity.badRequest().build()
+        }
         val updatedField = customFieldService.updateCustomField(id, request, companyId)
         return if (updatedField != null) {
             ResponseEntity.ok(updatedField)
@@ -188,9 +208,12 @@ class CustomFieldController(
     fun deleteCustomField(
         @Parameter(description = "Custom field ID", required = true)
         @PathVariable id: Long,
-        @Parameter(description = "Company ID", required = true)
-        @RequestParam companyId: Long
+        request: HttpServletRequest
     ): ResponseEntity<Void> {
+        val companyId = requestUtils.extractCompanyIdFromToken(request)
+        if (companyId == null) {
+            return ResponseEntity.badRequest().build()
+        }
         val deleted = customFieldService.deleteCustomField(id, companyId)
         return if (deleted) {
             ResponseEntity.ok().build()

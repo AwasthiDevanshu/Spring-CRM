@@ -9,6 +9,14 @@ enum class DealStatus {
     OPEN, WON, LOST, CANCELLED
 }
 
+enum class PaymentType {
+    ONE_TIME, RECURRING, EMI
+}
+
+enum class PaymentStatus {
+    PENDING, PAID, OVERDUE, CANCELLED
+}
+
 @Table("deals")
 data class Deal(
     @Id
@@ -22,11 +30,24 @@ data class Deal(
     val expectedCloseDate: LocalDateTime? = null,
     val actualCloseDate: LocalDateTime? = null,
     val contactId: Long? = null,
+    val leadId: Long? = null, // Link to lead if converted from lead
     val pipelineId: Long,
     val stageId: Long,
     val assignedUserId: Long? = null,
     val companyId: Long,
+    // Payment-related fields
+    val paymentType: PaymentType = PaymentType.ONE_TIME,
+    val totalAmount: BigDecimal? = null, // Total amount for EMI/recurring
+    val installmentAmount: BigDecimal? = null, // Amount per installment
+    val installmentCount: Int? = null, // Number of installments
+    val installmentFrequency: String? = null, // MONTHLY, QUARTERLY, etc.
+    val nextPaymentDate: LocalDateTime? = null,
+    val lastPaymentDate: LocalDateTime? = null,
+    val paymentStatus: PaymentStatus = PaymentStatus.PENDING,
+    val deliveryDate: LocalDateTime? = null, // When product/service was delivered
+    val deliveryStatus: String? = null, // PENDING, DELIVERED, PARTIAL
     val createdAt: LocalDateTime = LocalDateTime.now(),
-    val updatedAt: LocalDateTime = LocalDateTime.now()
+    val updatedAt: LocalDateTime = LocalDateTime.now(),
+    val deletedAt: LocalDateTime? = null
 )
 

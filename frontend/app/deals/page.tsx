@@ -1,10 +1,9 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useAuth } from '@/hooks/use-auth'
+import { useDeals, useCreateDeal, useUpdateDeal, useDeleteDeal } from '@/hooks/use-deals'
 import { useRouter } from 'next/navigation'
-import { getAuthHeader } from '@/lib/auth'
-import { buildApiUrl, API_ENDPOINTS } from '@/lib/api-config'
 import { AppLayout } from '@/components/app-layout'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -60,14 +59,27 @@ const dealStatuses = [
 
 export default function DealsPage() {
   const { user, isAuthenticated, isLoading } = useAuth()
+  const { data: deals = [], isLoading: isLoadingDeals, error } = useDeals()
+  const createDealMutation = useCreateDeal()
+  const updateDealMutation = useUpdateDeal()
+  const deleteDealMutation = useDeleteDeal()
   const router = useRouter()
-  const [deals, setDeals] = useState<Deal[]>([])
-  const [filteredDeals, setFilteredDeals] = useState<Deal[]>([])
+  
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState('ALL')
-  const [isLoadingDeals, setIsLoadingDeals] = useState(true)
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
   const [selectedDeal, setSelectedDeal] = useState<Deal | null>(null)
+  
+  // Deal form state
+  const [dealForm, setDealForm] = useState({
+    name: '',
+    description: '',
+    value: '',
+    status: 'PROSPECT',
+    probability: '',
+    expectedCloseDate: ''
+  })
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -75,37 +87,8 @@ export default function DealsPage() {
     }
   }, [isAuthenticated, isLoading, router])
 
-  useEffect(() => {
-    if (isAuthenticated) {
-      fetchDeals()
-    }
-  }, [isAuthenticated])
-
-  useEffect(() => {
-    filterDeals()
-  }, [deals, searchTerm, statusFilter])
-
-  const fetchDeals = async () => {
-    try {
-      setIsLoadingDeals(true)
-      const response = await fetch(buildApiUrl(API_ENDPOINTS.DEALS.LIST, user?.companyId || 1), {
-        headers: {
-          'Authorization': `Bearer ${getAuthHeader() || ''}`
-        }
-      })
-      
-      if (response.ok) {
-        const data = await response.json()
-        setDeals(data)
-      }
-    } catch (error) {
-      console.error('Error fetching deals:', error)
-    } finally {
-      setIsLoadingDeals(false)
-    }
-  }
-
-  const filterDeals = () => {
+  // Memoized filtering for better performance
+  const filteredDeals = useMemo(() => {
     let filtered = deals
 
     if (searchTerm) {
@@ -119,8 +102,8 @@ export default function DealsPage() {
       filtered = filtered.filter(deal => deal.status === statusFilter)
     }
 
-    setFilteredDeals(filtered)
-  }
+    return filtered
+  }, [deals, searchTerm, statusFilter])
 
   const getStatusBadge = (status: string) => {
     const statusConfig = dealStatuses.find(s => s.value === status)
@@ -153,6 +136,54 @@ export default function DealsPage() {
 
   const calculateWonValue = (deals: Deal[]) => {
     return deals.filter(deal => deal.status === 'WON').reduce((sum, deal) => sum + deal.value, 0)
+  }
+
+  const handleDealFormChange = (field: string, value: string) => {
+    setDealForm(prev => ({
+      ...prev,
+      [field]: value
+    }))
+  }
+
+  const handleCreateDeal = async () => {
+    if (!dealForm.name || !dealForm.value) {
+      alert('Please fill in required fields (Name and Value)')
+      return
+    }
+
+    try {
+      setIsSubmitting(true)
+      const dealData = {
+        name: dealForm.name,
+        description: dealForm.description || '',
+        value: parseFloat(dealForm.value),
+        status: dealForm.status,
+        probability: parseInt(dealForm.probability) || 0,
+        expectedCloseDate: dealForm.expectedCloseDate || null,
+        contactId: null,
+        pipelineId: 1,
+        stageId: 1,
+        assignedUserId: null
+      }
+
+      await createDealMutation.mutateAsync(dealData)
+      
+      // Reset form and close dialog
+      setDealForm({
+        name: '',
+        description: '',
+        value: '',
+        status: 'PROSPECT',
+        probability: '',
+        expectedCloseDate: ''
+      })
+      setIsCreateDialogOpen(false)
+    } catch (error) {
+      console.error('Error creating deal:', error)
+      alert('Failed to create deal. Please try again.')
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   if (isLoading) {
@@ -219,9 +250,12 @@ export default function DealsPage() {
               </select>
             </div>
             <div className="flex items-end">
-              <Button variant="outline" onClick={fetchDeals}>
+              <Button variant="outline" onClick={() => {
+                setSearchTerm('')
+                setStatusFilter('ALL')
+              }}>
                 <Filter className="mr-2 h-4 w-4" />
-                Apply Filters
+                Clear Filters
               </Button>
             </div>
           </div>
@@ -382,22 +416,43 @@ export default function DealsPage() {
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="name">Deal Name</Label>
-                <Input id="name" placeholder="Enter deal name" />
+                <Label htmlFor="name">Deal Name *</Label>
+                <Input 
+                  id="name" 
+                  placeholder="Enter deal name" 
+                  value={dealForm.name}
+                  onChange={(e) => handleDealFormChange('name', e.target.value)}
+                />
               </div>
               <div>
-                <Label htmlFor="value">Value</Label>
-                <Input id="value" type="number" placeholder="0.00" />
+                <Label htmlFor="value">Value *</Label>
+                <Input 
+                  id="value" 
+                  type="number" 
+                  placeholder="0.00" 
+                  value={dealForm.value}
+                  onChange={(e) => handleDealFormChange('value', e.target.value)}
+                />
               </div>
             </div>
             <div>
               <Label htmlFor="description">Description</Label>
-              <Input id="description" placeholder="Enter deal description" />
+              <Input 
+                id="description" 
+                placeholder="Enter deal description" 
+                value={dealForm.description}
+                onChange={(e) => handleDealFormChange('description', e.target.value)}
+              />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="status">Status</Label>
-                <select id="status" className="w-full p-2 border rounded-md">
+                <select 
+                  id="status" 
+                  className="w-full p-2 border rounded-md"
+                  value={dealForm.status}
+                  onChange={(e) => handleDealFormChange('status', e.target.value)}
+                >
                   {dealStatuses.map(status => (
                     <option key={status.value} value={status.value}>
                       {status.label}
@@ -407,19 +462,35 @@ export default function DealsPage() {
               </div>
               <div>
                 <Label htmlFor="probability">Probability (%)</Label>
-                <Input id="probability" type="number" min="0" max="100" placeholder="0" />
+                <Input 
+                  id="probability" 
+                  type="number" 
+                  min="0" 
+                  max="100" 
+                  placeholder="0" 
+                  value={dealForm.probability}
+                  onChange={(e) => handleDealFormChange('probability', e.target.value)}
+                />
               </div>
             </div>
             <div>
               <Label htmlFor="expectedCloseDate">Expected Close Date</Label>
-              <Input id="expectedCloseDate" type="date" />
+              <Input 
+                id="expectedCloseDate" 
+                type="date" 
+                value={dealForm.expectedCloseDate}
+                onChange={(e) => handleDealFormChange('expectedCloseDate', e.target.value)}
+              />
             </div>
             <div className="flex justify-end space-x-2">
               <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
                 Cancel
               </Button>
-              <Button onClick={() => setIsCreateDialogOpen(false)}>
-                Create Deal
+              <Button 
+                onClick={handleCreateDeal}
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? 'Creating...' : 'Create Deal'}
               </Button>
             </div>
           </div>

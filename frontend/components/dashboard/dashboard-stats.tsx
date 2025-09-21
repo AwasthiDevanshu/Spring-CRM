@@ -15,7 +15,6 @@ import {
   ArrowDownRight
 } from 'lucide-react'
 import { useDashboardStats } from '@/hooks/use-dashboard'
-import { useAuth } from '@/hooks/use-auth'
 
 const statConfigs = [
   {
@@ -146,8 +145,7 @@ function StatCardSkeleton() {
 }
 
 export function DashboardStats() {
-  const { user } = useAuth()
-  const { data: stats, isLoading, error } = useDashboardStats(Number(user?.companyId) || 1)
+  const { data: stats, isLoading, error } = useDashboardStats()
 
   if (error) {
     return (

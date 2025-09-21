@@ -118,6 +118,37 @@ export const API_ENDPOINTS = {
     FIX_SCHEMA: '/database/fix-schema',
     SEED_DATA: '/database/seed-data',
   },
+
+  // Reports
+  REPORTS: {
+    LEADS_PERFORMANCE: '/reports/leads-performance',
+    SALES_PIPELINE: '/reports/sales-pipeline',
+    ACTIVITY_SUMMARY: '/reports/activity-summary',
+    REVENUE_FORECAST: '/reports/revenue-forecast',
+    QUICK_STATS: '/reports/quick-stats',
+  },
+
+  // Custom Forms
+  CUSTOM_FORMS: {
+    LIST: '/custom-forms',
+    CREATE: '/custom-forms',
+    GET: (id: number) => `/custom-forms/${id}`,
+    UPDATE: (id: number) => `/custom-forms/${id}`,
+    DELETE: (id: number) => `/custom-forms/${id}`,
+    CREATE_ACCESS: (id: number) => `/custom-forms/${id}/access`,
+    ACCESS_HISTORY: (id: number) => `/custom-forms/${id}/access-history`,
+    SHARE_URL: (id: number) => `/custom-forms/${id}/share-url`,
+    PUBLIC_ACCESS: (token: string) => `/custom-forms/public/access/${token}`,
+    PUBLIC_SUBMIT: '/custom-forms/public/submit',
+    DEACTIVATE_ACCESS: (accessId: number) => `/custom-forms/access/${accessId}`,
+    REGENERATE_ACCESS: (accessId: number) => `/custom-forms/access/${accessId}/regenerate`,
+    WHATSAPP_URL: (accessId: number) => `/custom-forms/access/${accessId}/whatsapp-url`,
+  },
+
+  // Chatbot
+  CHATBOT: {
+    QUERY: '/chatbot/query',
+  },
 } as const
 
 // Helper function to build full URL
@@ -125,11 +156,8 @@ export function buildApiUrl(endpoint: string, companyId?: number): string {
   const baseUrl = API_CONFIG.BASE_URL
   const url = `${baseUrl}${endpoint}`
   
-  if (companyId !== undefined) {
-    const separator = endpoint.includes('?') ? '&' : '?'
-    return `${url}${separator}companyId=${companyId}`
-  }
-  
+  // Note: companyId is now extracted from JWT token on the backend
+  // No need to add it as query parameter
   return url
 }
 

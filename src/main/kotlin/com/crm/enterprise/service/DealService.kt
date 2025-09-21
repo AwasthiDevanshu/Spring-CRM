@@ -9,6 +9,7 @@ import com.crm.enterprise.repository.DealRepository
 import org.springframework.stereotype.Service
 import java.math.BigDecimal
 import java.time.LocalDateTime
+import java.time.temporal.ChronoUnit
 
 @Service
 class DealService(
@@ -25,6 +26,7 @@ class DealService(
             probability = dealRequest.probability,
             expectedCloseDate = dealRequest.expectedCloseDate,
             contactId = dealRequest.contactId,
+            leadId = dealRequest.leadId,
             pipelineId = dealRequest.pipelineId,
             stageId = dealRequest.stageId,
             assignedUserId = dealRequest.assignedUserId,
@@ -125,6 +127,74 @@ class DealService(
         )
     }
     
+    // Report methods
+    fun getSalesPipelineReport(companyId: Long, days: Int): com.crm.enterprise.controller.SalesPipelineReport {
+        val cutoffDate = LocalDateTime.now().minusDays(days.toLong())
+        val allDeals = dealRepository.findByCompanyId(companyId)
+        val periodDeals = allDeals.filter { it.createdAt.isAfter(cutoffDate) }
+        val previousPeriodDeals = allDeals.filter { 
+            it.createdAt.isAfter(cutoffDate.minusDays(days.toLong())) && 
+            it.createdAt.isBefore(cutoffDate) 
+        }
+        
+        val totalDeals = periodDeals.size
+        val wonDeals = periodDeals.count { it.status == DealStatus.WON }
+        val totalRevenue = periodDeals.filter { it.status == DealStatus.WON }.sumOf { it.value }
+        val averageDealSize = if (wonDeals > 0) totalRevenue.divide(BigDecimal.valueOf(wonDeals.toLong())) else BigDecimal.ZERO
+        
+        val previousTotalDeals = previousPeriodDeals.size
+        val changePercent = if (previousTotalDeals > 0) {
+            ((totalDeals - previousTotalDeals).toDouble() / previousTotalDeals) * 100
+        } else 0.0
+        
+        return com.crm.enterprise.controller.SalesPipelineReport(
+            totalDeals = totalDeals,
+            wonDeals = wonDeals,
+            totalRevenue = totalRevenue,
+            averageDealSize = averageDealSize,
+            periodComparison = com.crm.enterprise.controller.PeriodComparison(
+                changePercent = changePercent,
+                changeType = if (changePercent >= 0) "increase" else "decrease"
+            )
+        )
+    }
+    
+    fun getRevenueForecastReport(companyId: Long): com.crm.enterprise.controller.RevenueForecastReport {
+        val deals = dealRepository.findByCompanyId(companyId)
+        val openDeals = deals.filter { it.status == DealStatus.OPEN }
+        
+        val pipelineValue = openDeals.sumOf { it.value }
+        val forecastedRevenue = openDeals.sumOf { it.value.multiply(BigDecimal.valueOf(it.probability / 100.0)) }
+        val winProbability = if (openDeals.isNotEmpty()) openDeals.map { it.probability }.average() else 0.0
+        
+        // Simple growth rate calculation based on recent deals
+        val recentDeals = deals.filter { it.createdAt.isAfter(LocalDateTime.now().minusMonths(6)) }
+        val olderDeals = deals.filter { it.createdAt.isBefore(LocalDateTime.now().minusMonths(6)) }
+        val growthRate = if (olderDeals.isNotEmpty()) {
+            ((recentDeals.size - olderDeals.size).toDouble() / olderDeals.size) * 100
+        } else 0.0
+        
+        return com.crm.enterprise.controller.RevenueForecastReport(
+            forecastedRevenue = forecastedRevenue,
+            pipelineValue = pipelineValue,
+            winProbability = winProbability,
+            growthRate = growthRate
+        )
+    }
+    
+    fun getDealsClosedThisMonth(companyId: Long): Int {
+        val startOfMonth = LocalDateTime.now().withDayOfMonth(1).withHour(0).withMinute(0).withSecond(0)
+        return dealRepository.findByCompanyId(companyId)
+            .count { it.status == DealStatus.WON && it.updatedAt.isAfter(startOfMonth) }
+    }
+    
+    fun getRevenueThisMonth(companyId: Long): BigDecimal {
+        val startOfMonth = LocalDateTime.now().withDayOfMonth(1).withHour(0).withMinute(0).withSecond(0)
+        return dealRepository.findByCompanyId(companyId)
+            .filter { it.status == DealStatus.WON && it.updatedAt.isAfter(startOfMonth) }
+            .sumOf { it.value }
+    }
+
     private fun toDealResponse(deal: Deal): DealResponse {
         return DealResponse(
             id = deal.id ?: 0L,
@@ -137,6 +207,7 @@ class DealService(
             expectedCloseDate = deal.expectedCloseDate,
             actualCloseDate = deal.actualCloseDate,
             contactId = deal.contactId,
+            leadId = deal.leadId,
             pipelineId = deal.pipelineId,
             stageId = deal.stageId,
             assignedUserId = deal.assignedUserId,

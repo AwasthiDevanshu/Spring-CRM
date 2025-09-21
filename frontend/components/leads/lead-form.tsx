@@ -329,16 +329,11 @@ const LeadForm = ({ initialData, onSave, onCancel, companyId }: LeadFormProps) =
 
   return (
     <div className="space-y-6">
-      {/* Header */}
+      {/* Field Count Info */}
       <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-xl font-semibold">
-            {initialData ? 'Edit Lead' : 'Create New Lead'}
-          </h2>
-          <p className="text-sm text-muted-foreground">
-            {fieldConfig.totalFields} total fields ({fieldConfig.coreFields.length} core, {fieldConfig.customFields.length} custom)
-          </p>
-        </div>
+        <p className="text-sm text-muted-foreground">
+          {fieldConfig.totalFields} total fields ({fieldConfig.coreFields.length} core, {fieldConfig.customFields.length} custom)
+        </p>
         <Badge variant="outline" className="flex items-center gap-1">
           <Settings className="h-3 w-3" />
           Dynamic Fields

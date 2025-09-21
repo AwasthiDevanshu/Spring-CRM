@@ -4,6 +4,7 @@ import com.crm.enterprise.dto.ContactRequest
 import com.crm.enterprise.dto.ContactResponse
 import com.crm.enterprise.dto.ContactUpdateRequest
 import com.crm.enterprise.service.ContactService
+import com.crm.enterprise.util.RequestUtils
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.Parameter
 import io.swagger.v3.oas.annotations.media.Content
@@ -13,12 +14,14 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses
 import io.swagger.v3.oas.annotations.tags.Tag
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
+import jakarta.servlet.http.HttpServletRequest
 
 @RestController
 @RequestMapping("/api/contacts")
 @Tag(name = "Contacts Management", description = "Contact management endpoints for creating, reading, updating, and deleting contacts")
 class ContactController(
-    private val contactService: ContactService
+    private val contactService: ContactService,
+    private val requestUtils: RequestUtils
 ) {
     
     @PostMapping
@@ -42,15 +45,12 @@ class ContactController(
     fun createContact(
         @Parameter(description = "Contact information", required = true)
         @RequestBody contactRequest: ContactRequest,
-        @Parameter(description = "Company ID", required = true)
-        @RequestParam companyId: Long
+        request: HttpServletRequest
     ): ResponseEntity<ContactResponse> {
-        return try {
-            val contact = contactService.createContact(contactRequest, companyId)
-            ResponseEntity.ok(contact)
-        } catch (e: Exception) {
-            ResponseEntity.badRequest().build()
-        }
+        val companyId = requestUtils.extractCompanyIdFromToken(request)
+            ?: throw IllegalArgumentException("Company ID not found in token")
+        val contact = contactService.createContact(contactRequest, companyId)
+        return ResponseEntity.ok(contact)
     }
     
     @GetMapping
@@ -68,23 +68,20 @@ class ContactController(
         ]
     )
     fun getContacts(
-        @Parameter(description = "Company ID", required = true)
-        @RequestParam companyId: Long,
         @Parameter(description = "Assigned user ID", required = false)
         @RequestParam(required = false) assignedUserId: Long?,
         @Parameter(description = "Search term", required = false)
-        @RequestParam(required = false) search: String?
+        @RequestParam(required = false) search: String?,
+        request: HttpServletRequest
     ): ResponseEntity<List<ContactResponse>> {
-        return try {
-            val contacts = when {
-                assignedUserId != null -> contactService.getContactsByAssignedUser(companyId, assignedUserId)
-                !search.isNullOrBlank() -> contactService.searchContacts(companyId, search)
-                else -> contactService.getContactsByCompany(companyId)
-            }
-            ResponseEntity.ok(contacts)
-        } catch (e: Exception) {
-            ResponseEntity.badRequest().build()
+        val companyId = requestUtils.extractCompanyIdFromToken(request)
+            ?: throw IllegalArgumentException("Company ID not found in token")
+        val contacts = when {
+            assignedUserId != null -> contactService.getContactsByAssignedUser(companyId, assignedUserId)
+            !search.isNullOrBlank() -> contactService.searchContacts(companyId, search)
+            else -> contactService.getContactsByCompany(companyId)
         }
+        return ResponseEntity.ok(contacts)
     }
     
     @GetMapping("/{id}")
@@ -108,18 +105,15 @@ class ContactController(
     fun getContact(
         @Parameter(description = "Contact ID", required = true)
         @PathVariable id: Long,
-        @Parameter(description = "Company ID", required = true)
-        @RequestParam companyId: Long
+        request: HttpServletRequest
     ): ResponseEntity<ContactResponse> {
-        return try {
-            val contact = contactService.getContactById(id, companyId)
-            if (contact != null) {
-                ResponseEntity.ok(contact)
-            } else {
-                ResponseEntity.notFound().build()
-            }
-        } catch (e: Exception) {
-            ResponseEntity.badRequest().build()
+        val companyId = requestUtils.extractCompanyIdFromToken(request)
+            ?: throw IllegalArgumentException("Company ID not found in token")
+        val contact = contactService.getContactById(id, companyId)
+        return if (contact != null) {
+            ResponseEntity.ok(contact)
+        } else {
+            ResponseEntity.notFound().build()
         }
     }
     
@@ -146,18 +140,15 @@ class ContactController(
         @PathVariable id: Long,
         @Parameter(description = "Updated contact information", required = true)
         @RequestBody updateRequest: ContactUpdateRequest,
-        @Parameter(description = "Company ID", required = true)
-        @RequestParam companyId: Long
+        request: HttpServletRequest
     ): ResponseEntity<ContactResponse> {
-        return try {
-            val contact = contactService.updateContact(id, updateRequest, companyId)
-            if (contact != null) {
-                ResponseEntity.ok(contact)
-            } else {
-                ResponseEntity.notFound().build()
-            }
-        } catch (e: Exception) {
-            ResponseEntity.badRequest().build()
+        val companyId = requestUtils.extractCompanyIdFromToken(request)
+            ?: throw IllegalArgumentException("Company ID not found in token")
+        val contact = contactService.updateContact(id, updateRequest, companyId)
+        return if (contact != null) {
+            ResponseEntity.ok(contact)
+        } else {
+            ResponseEntity.notFound().build()
         }
     }
     
@@ -181,18 +172,15 @@ class ContactController(
     fun deleteContact(
         @Parameter(description = "Contact ID", required = true)
         @PathVariable id: Long,
-        @Parameter(description = "Company ID", required = true)
-        @RequestParam companyId: Long
+        request: HttpServletRequest
     ): ResponseEntity<Void> {
-        return try {
-            val deleted = contactService.deleteContact(id, companyId)
-            if (deleted) {
-                ResponseEntity.noContent().build()
-            } else {
-                ResponseEntity.notFound().build()
-            }
-        } catch (e: Exception) {
-            ResponseEntity.badRequest().build()
+        val companyId = requestUtils.extractCompanyIdFromToken(request)
+            ?: throw IllegalArgumentException("Company ID not found in token")
+        val deleted = contactService.deleteContact(id, companyId)
+        return if (deleted) {
+            ResponseEntity.noContent().build()
+        } else {
+            ResponseEntity.notFound().build()
         }
     }
 }

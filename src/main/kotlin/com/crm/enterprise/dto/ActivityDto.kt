@@ -12,9 +12,11 @@ data class ActivityRequest(
     val status: ActivityStatus = ActivityStatus.PENDING,
     val priority: ActivityPriority = ActivityPriority.MEDIUM,
     val dueDate: String? = null, // Accept as String and convert in service
-    val assignedUserId: Long? = null,
-    val relatedEntityType: String? = null,
-    val relatedEntityId: Long? = null
+    val assignedTo: Long, // User who should perform the activity
+    val entityType: String, // 'LEAD', 'CONTACT', 'DEAL', etc.
+    val entityId: Long, // ID of the related entity
+    val outcome: String? = null,
+    val duration: Int? = null // in minutes
 )
 
 data class ActivityResponse(
@@ -25,11 +27,18 @@ data class ActivityResponse(
     val status: ActivityStatus,
     val priority: ActivityPriority,
     val dueDate: LocalDateTime?,
-    val completedDate: LocalDateTime?,
-    val assignedUserId: Long?,
-    val relatedEntityType: String?,
-    val relatedEntityId: Long?,
+    val completedAt: LocalDateTime?,
+    val assignedTo: Long,
+    val assignedToName: String? = null, // User's name for display
+    val assignedBy: Long,
+    val assignedByName: String? = null, // User's name for display
+    val entityType: String,
+    val entityId: Long,
+    val entityName: String? = null, // Name of the related entity for display
+    val outcome: String?,
+    val duration: Int?,
     val companyId: Long,
+    val activityDate: LocalDateTime,
     val createdAt: LocalDateTime,
     val updatedAt: LocalDateTime
 )
@@ -41,7 +50,7 @@ data class ActivityUpdateRequest(
     val status: ActivityStatus? = null,
     val priority: ActivityPriority? = null,
     val dueDate: String? = null, // Accept as String and convert in service
-    val assignedUserId: Long? = null,
-    val relatedEntityType: String? = null,
-    val relatedEntityId: Long? = null
+    val assignedTo: Long? = null,
+    val outcome: String? = null,
+    val duration: Int? = null
 )

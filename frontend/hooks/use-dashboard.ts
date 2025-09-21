@@ -1,94 +1,45 @@
 import { useQuery } from '@tanstack/react-query'
-import { api, endpoints } from '@/lib/api'
-import { DashboardStats, Lead, Deal, Activity } from '@/types/crm'
+import { useApi } from './use-api'
 
-export function useDashboardStats(companyId: number) {
+export function useDashboardStats() {
+  const { getQuickStats } = useApi()
   return useQuery({
-    queryKey: ['dashboard', 'stats', companyId],
-    queryFn: async () => {
-      const response = await api.get(endpoints.DASHBOARD.STATS, {
-        params: { companyId }
-      })
-      return response.data as DashboardStats
-    },
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    queryKey: ['dashboardStats'],
+    queryFn: getQuickStats,
+    staleTime: 60 * 1000, // 1 minute
   })
 }
 
-export function useRecentLeads(companyId: number, limit = 5) {
+export function useRecentActivities() {
+  const { getActivities } = useApi()
   return useQuery({
-    queryKey: ['dashboard', 'recent-leads', companyId, limit],
+    queryKey: ['recentActivities'],
     queryFn: async () => {
-      const response = await api.get(endpoints.LEADS.LIST, {
-        params: { companyId, limit, page: 0 }
-      })
-      return response.data.content || response.data as Lead[]
+      const data = await getActivities()
+      return data.slice(0, 10) // Limit to 10 recent activities
     },
-    staleTime: 2 * 60 * 1000, // 2 minutes
+    staleTime: 30 * 1000, // 30 seconds
   })
 }
 
-export function useRecentDeals(companyId: number, limit = 5) {
+export function useNavigationCounts() {
+  const { getLeads, getContacts, getDeals, getActivities } = useApi()
   return useQuery({
-    queryKey: ['dashboard', 'recent-deals', companyId, limit],
+    queryKey: ['navigationCounts'],
     queryFn: async () => {
-      const response = await api.get(endpoints.DEALS.LIST, {
-        params: { companyId, limit, page: 0 }
-      })
-      return response.data.content || response.data as Deal[]
+      const [leads, contacts, deals, activities] = await Promise.all([
+        getLeads(),
+        getContacts(),
+        getDeals(),
+        getActivities(),
+      ])
+      return {
+        leads: leads.length,
+        contacts: contacts.length,
+        deals: deals.length,
+        activities: activities.length,
+      }
     },
-    staleTime: 2 * 60 * 1000, // 2 minutes
-  })
-}
-
-export function useRecentActivities(companyId: number, limit = 10) {
-  return useQuery({
-    queryKey: ['dashboard', 'recent-activities', companyId, limit],
-    queryFn: async () => {
-      const response = await api.get(endpoints.ACTIVITIES.LIST, {
-        params: { companyId, limit, page: 0 }
-      })
-      return response.data.content || response.data as Activity[]
-    },
-    staleTime: 1 * 60 * 1000, // 1 minute
-  })
-}
-
-export function useLeadStats(companyId: number) {
-  return useQuery({
-    queryKey: ['leads', 'stats', companyId],
-    queryFn: async () => {
-      const response = await api.get(endpoints.LEADS.STATS, {
-        params: { companyId }
-      })
-      return response.data
-    },
-    staleTime: 5 * 60 * 1000, // 5 minutes
-  })
-}
-
-export function useLeadSources(companyId: number) {
-  return useQuery({
-    queryKey: ['leads', 'sources', companyId],
-    queryFn: async () => {
-      const response = await api.get(endpoints.LEADS.SOURCES, {
-        params: { companyId }
-      })
-      return response.data
-    },
-    staleTime: 10 * 60 * 1000, // 10 minutes
-  })
-}
-
-export function useLeadUsers(companyId: number) {
-  return useQuery({
-    queryKey: ['leads', 'users', companyId],
-    queryFn: async () => {
-      const response = await api.get(endpoints.LEADS.USERS, {
-        params: { companyId }
-      })
-      return response.data
-    },
-    staleTime: 10 * 60 * 1000, // 10 minutes
+    staleTime: 60 * 1000, // 1 minute
   })
 }

@@ -38,7 +38,9 @@ data class Lead(
     @org.springframework.data.relational.core.mapping.Column("created_at")
     val createdAt: LocalDateTime = LocalDateTime.now(),
     @org.springframework.data.relational.core.mapping.Column("updated_at")
-    val updatedAt: LocalDateTime = LocalDateTime.now()
+    val updatedAt: LocalDateTime = LocalDateTime.now(),
+    @org.springframework.data.relational.core.mapping.Column("deleted_at")
+    val deletedAt: LocalDateTime? = null
 ) {
     val fullName: String
         get() = "$firstName $lastName"

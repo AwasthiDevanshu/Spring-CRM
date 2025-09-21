@@ -1,10 +1,15 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useAuth } from '@/hooks/use-auth'
+import { useLeads, useCreateLead, useUpdateLead, useDeleteLead } from '@/hooks/use-leads'
+import { useCreateDeal } from '@/hooks/use-deals'
+import { useCreateActivity } from '@/hooks/use-activities'
+import { useCreateContact } from '@/hooks/use-contacts'
+import { useCustomForms } from '@/hooks/use-custom-forms'
+import WhatsAppButton from '@/components/ui/whatsapp-button'
+import { FormInput, MessageCircle } from 'lucide-react'
 import { useRouter } from 'next/navigation'
-import { getAuthHeader } from '@/lib/auth'
-import { buildApiUrl, API_ENDPOINTS } from '@/lib/api-config'
 import { AppLayout } from '@/components/app-layout'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -12,7 +17,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
 import LeadForm from '@/components/leads/lead-form'
 import CustomFieldManager from '@/components/leads/custom-field-manager'
 import { LeadTimeline } from '@/components/leads/lead-timeline'
@@ -30,9 +37,13 @@ import {
   Eye,
   Edit,
   Trash2,
-  MessageSquare
+  MessageSquare,
+  DollarSign,
+  Activity,
+  CheckCircle,
+  UserPlus,
+  Users
 } from 'lucide-react'
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 
 interface Lead {
   id: number
@@ -76,18 +87,35 @@ const leadSources = [
 
 export default function LeadsPage() {
   const { user, isAuthenticated, isLoading } = useAuth()
+  const { data: leads = [], isLoading: isLoadingLeads, error } = useLeads()
+  const { data: forms = [] } = useCustomForms()
+  const createLeadMutation = useCreateLead()
+  const updateLeadMutation = useUpdateLead()
+  const deleteLeadMutation = useDeleteLead()
+  const createDealMutation = useCreateDeal()
+  const createActivityMutation = useCreateActivity()
+  const createContactMutation = useCreateContact()
   const router = useRouter()
-  const [leads, setLeads] = useState<Lead[]>([])
-  const [filteredLeads, setFilteredLeads] = useState<Lead[]>([])
+
+  // Check if user is admin
+  const isAdmin = user?.isCompanyAdmin || user?.isSuperuser
+  
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState('ALL')
   const [sourceFilter, setSourceFilter] = useState('ALL')
-  const [isLoadingLeads, setIsLoadingLeads] = useState(true)
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null)
   const [isTimelineDialogOpen, setIsTimelineDialogOpen] = useState(false)
   const [timelineLead, setTimelineLead] = useState<Lead | null>(null)
+  const [isCreateDealDialogOpen, setIsCreateDealDialogOpen] = useState(false)
+  const [isCreateActivityDialogOpen, setIsCreateActivityDialogOpen] = useState(false)
+  const [isConvertToContactDialogOpen, setIsConvertToContactDialogOpen] = useState(false)
+  const [isFormShareDialogOpen, setIsFormShareDialogOpen] = useState(false)
+  const [dealLead, setDealLead] = useState<Lead | null>(null)
+  const [activityLead, setActivityLead] = useState<Lead | null>(null)
+  const [contactLead, setContactLead] = useState<Lead | null>(null)
+  const [selectedForm, setSelectedForm] = useState<any>(null)
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -95,43 +123,14 @@ export default function LeadsPage() {
     }
   }, [isAuthenticated, isLoading, router])
 
-  useEffect(() => {
-    if (isAuthenticated) {
-      fetchLeads()
-    }
-  }, [isAuthenticated])
-
-  useEffect(() => {
-    filterLeads()
-  }, [leads, searchTerm, statusFilter, sourceFilter])
-
-  const fetchLeads = async () => {
-    try {
-      setIsLoadingLeads(true)
-      const response = await fetch(buildApiUrl(API_ENDPOINTS.LEADS.LIST, user?.companyId || 1), {
-        headers: {
-          'Authorization': getAuthHeader() || ''
-        }
-      })
-      
-      if (response.ok) {
-        const data = await response.json()
-        setLeads(data)
-      }
-    } catch (error) {
-      console.error('Error fetching leads:', error)
-    } finally {
-      setIsLoadingLeads(false)
-    }
-  }
-
-  const filterLeads = () => {
+  // Memoized filtering for better performance
+  const filteredLeads = useMemo(() => {
     let filtered = leads
 
     if (searchTerm) {
       filtered = filtered.filter(lead => 
-        lead.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        lead.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        lead.fullName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        lead.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         lead.company?.toLowerCase().includes(searchTerm.toLowerCase())
       )
     }
@@ -144,8 +143,8 @@ export default function LeadsPage() {
       filtered = filtered.filter(lead => lead.source === sourceFilter)
     }
 
-    setFilteredLeads(filtered)
-  }
+    return filtered
+  }, [leads, searchTerm, statusFilter, sourceFilter])
 
   const getStatusBadge = (status: string) => {
     const statusConfig = leadStatuses.find(s => s.value === status)
@@ -163,19 +162,8 @@ export default function LeadsPage() {
 
   const handleCreateLead = async (leadData: any) => {
     try {
-      const response = await fetch(buildApiUrl(API_ENDPOINTS.LEADS.CREATE, user?.companyId || 1), {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${getAuthHeader() || ''}`
-        },
-        body: JSON.stringify(leadData)
-      })
-
-      if (response.ok) {
-        await fetchLeads()
-        setIsCreateDialogOpen(false)
-      }
+      await createLeadMutation.mutateAsync(leadData)
+      setIsCreateDialogOpen(false)
     } catch (error) {
       console.error('Error creating lead:', error)
     }
@@ -188,20 +176,9 @@ export default function LeadsPage() {
 
   const handleUpdateLead = async (leadData: any) => {
     try {
-      const response = await fetch(buildApiUrl(API_ENDPOINTS.LEADS.UPDATE(selectedLead?.id || 0), user?.companyId || 1), {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${getAuthHeader() || ''}`
-        },
-        body: JSON.stringify(leadData)
-      })
-
-      if (response.ok) {
-        await fetchLeads()
-        setIsEditDialogOpen(false)
-        setSelectedLead(null)
-      }
+      await updateLeadMutation.mutateAsync({ id: selectedLead?.id || 0, data: leadData })
+      setIsEditDialogOpen(false)
+      setSelectedLead(null)
     } catch (error) {
       console.error('Error updating lead:', error)
     }
@@ -210,20 +187,75 @@ export default function LeadsPage() {
   const handleDeleteLead = async (leadId: number) => {
     if (confirm('Are you sure you want to delete this lead?')) {
       try {
-        const response = await fetch(buildApiUrl(API_ENDPOINTS.LEADS.DELETE(leadId), user?.companyId || 1), {
-          method: 'DELETE',
-          headers: {
-            'Authorization': `Bearer ${getAuthHeader() || ''}`
-          }
-        })
-
-        if (response.ok) {
-          await fetchLeads()
-        }
+        await deleteLeadMutation.mutateAsync(leadId)
       } catch (error) {
         console.error('Error deleting lead:', error)
       }
     }
+  }
+
+  const handleCreateDeal = (lead: Lead) => {
+    setDealLead(lead)
+    setIsCreateDealDialogOpen(true)
+  }
+
+  const handleCreateActivity = (lead: Lead) => {
+    setActivityLead(lead)
+    setIsCreateActivityDialogOpen(true)
+  }
+
+  const handleDealSubmit = async (dealData: any) => {
+    try {
+      const dealWithLead = {
+        ...dealData,
+        leadId: dealLead?.id
+      }
+      await createDealMutation.mutateAsync(dealWithLead)
+      setIsCreateDealDialogOpen(false)
+      setDealLead(null)
+    } catch (error) {
+      console.error('Error creating deal:', error)
+    }
+  }
+
+  const handleActivitySubmit = async (activityData: any) => {
+    try {
+      const activityWithLead = {
+        ...activityData,
+        entityType: 'LEAD',
+        entityId: activityLead?.id
+      }
+      await createActivityMutation.mutateAsync(activityWithLead)
+      setIsCreateActivityDialogOpen(false)
+      setActivityLead(null)
+    } catch (error) {
+      console.error('Error creating activity:', error)
+    }
+  }
+
+  const handleConvertToContact = (lead: Lead) => {
+    setContactLead(lead)
+    setIsConvertToContactDialogOpen(true)
+  }
+
+  const handleContactSubmit = async (contactData: any) => {
+    try {
+      const contactWithLead = {
+        ...contactData,
+        leadId: contactLead?.id
+      }
+      await createContactMutation.mutateAsync(contactWithLead)
+      setIsConvertToContactDialogOpen(false)
+      setContactLead(null)
+    } catch (error) {
+      console.error('Error converting lead to contact:', error)
+    }
+  }
+
+  const handleFormShare = async (lead: Lead, form: any) => {
+    setSelectedForm(form)
+    setDealLead(lead) // Reuse dealLead state for form sharing
+    setIsFormShareDialogOpen(true)
   }
 
   const getStatusColor = (status: string) => {
@@ -253,6 +285,18 @@ export default function LeadsPage() {
 
   if (!isAuthenticated) {
     return <div className="flex items-center justify-center h-64">Redirecting to login...</div>
+  }
+
+  if (error) {
+    return (
+      <AppLayout>
+        <div className="p-6">
+          <div className="text-center text-red-600">
+            Error loading leads: {error.message}
+          </div>
+        </div>
+      </AppLayout>
+    )
   }
 
   return (
@@ -327,9 +371,13 @@ export default function LeadsPage() {
               </select>
             </div>
             <div className="flex items-end">
-              <Button variant="outline" onClick={fetchLeads}>
+              <Button variant="outline" onClick={() => {
+                setSearchTerm('')
+                setStatusFilter('ALL')
+                setSourceFilter('ALL')
+              }}>
                 <Filter className="mr-2 h-4 w-4" />
-                Apply Filters
+                Clear Filters
               </Button>
             </div>
           </div>
@@ -451,6 +499,37 @@ export default function LeadsPage() {
                     <Button variant="ghost" size="sm" onClick={() => handleEditLead(lead)}>
                       <Edit className="h-4 w-4" />
                     </Button>
+                    <WhatsAppButton
+                      contact={{
+                        name: lead.fullName,
+                        phone: lead.phone || '',
+                        company: lead.company || '',
+                        email: lead.email
+                      }}
+                      variant="ghost"
+                      size="sm"
+                      showLabel={false}
+                    />
+                    {forms.length > 0 && (
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="sm" title="Share Form">
+                            <FormInput className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          {forms.map((form) => (
+                            <DropdownMenuItem
+                              key={form.id}
+                              onClick={() => handleFormShare(lead, form)}
+                            >
+                              <FormInput className="mr-2 h-4 w-4" />
+                              {form.name}
+                            </DropdownMenuItem>
+                          ))}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    )}
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button variant="ghost" size="sm">
@@ -468,6 +547,18 @@ export default function LeadsPage() {
                         }}>
                           <MessageSquare className="mr-2 h-4 w-4" />
                           View Timeline
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleCreateDeal(lead)}>
+                          <DollarSign className="mr-2 h-4 w-4" />
+                          Create Deal
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleCreateActivity(lead)}>
+                          <Activity className="mr-2 h-4 w-4" />
+                          Create Activity
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleConvertToContact(lead)}>
+                          <UserPlus className="mr-2 h-4 w-4" />
+                          Convert to Contact
                         </DropdownMenuItem>
                         <DropdownMenuItem className="text-red-600" onClick={() => handleDeleteLead(lead.id)}>
                           <Trash2 className="mr-2 h-4 w-4" />
@@ -496,7 +587,6 @@ export default function LeadsPage() {
             <LeadForm 
               onSave={handleCreateLead} 
               onCancel={() => setIsCreateDialogOpen(false)}
-              companyId={Number(user?.companyId) || 1}
             />
           </div>
         </DialogContent>
@@ -519,7 +609,6 @@ export default function LeadsPage() {
                 setIsEditDialogOpen(false)
                 setSelectedLead(null)
               }}
-              companyId={Number(user?.companyId) || 1}
             />
           </div>
         </DialogContent>
@@ -568,13 +657,558 @@ export default function LeadsPage() {
               {/* Timeline */}
               <LeadTimeline 
                 leadId={timelineLead.id} 
-                companyId={user?.companyId || 1} 
               />
             </div>
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Create Deal Dialog */}
+      <Dialog open={isCreateDealDialogOpen} onOpenChange={setIsCreateDealDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <DollarSign className="h-5 w-5" />
+              Create Deal for {dealLead?.fullName}
+            </DialogTitle>
+            <DialogDescription>
+              Create a new deal linked to this lead.
+            </DialogDescription>
+          </DialogHeader>
+          <DealForm
+            onSave={handleDealSubmit}
+            onCancel={() => {
+              setIsCreateDealDialogOpen(false)
+              setDealLead(null)
+            }}
+          />
+        </DialogContent>
+      </Dialog>
+
+      {/* Create Activity Dialog */}
+      <Dialog open={isCreateActivityDialogOpen} onOpenChange={setIsCreateActivityDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Activity className="h-5 w-5" />
+              Create Activity for {activityLead?.fullName}
+            </DialogTitle>
+            <DialogDescription>
+              Create a new activity linked to this lead.
+            </DialogDescription>
+          </DialogHeader>
+          <ActivityForm
+            onSave={handleActivitySubmit}
+            onCancel={() => {
+              setIsCreateActivityDialogOpen(false)
+              setActivityLead(null)
+            }}
+          />
+        </DialogContent>
+      </Dialog>
+
+      {/* Convert to Contact Dialog */}
+      <Dialog open={isConvertToContactDialogOpen} onOpenChange={setIsConvertToContactDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <UserPlus className="h-5 w-5" />
+              Convert Lead to Contact - {contactLead?.fullName}
+            </DialogTitle>
+            <DialogDescription>
+              Convert this qualified lead to a contact for ongoing relationship management.
+            </DialogDescription>
+          </DialogHeader>
+          <ContactForm
+            initialData={contactLead}
+            onSave={handleContactSubmit}
+            onCancel={() => {
+              setIsConvertToContactDialogOpen(false)
+              setContactLead(null)
+            }}
+          />
+        </DialogContent>
+      </Dialog>
+
+      {/* Form Share Dialog */}
+      <Dialog open={isFormShareDialogOpen} onOpenChange={setIsFormShareDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Share Form via WhatsApp</DialogTitle>
+            <DialogDescription>
+              Send the "{selectedForm?.name}" form to {dealLead?.fullName} via WhatsApp
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="p-4 bg-gray-50 rounded-lg">
+              <h4 className="font-medium mb-2">Form Details:</h4>
+              <p><strong>Name:</strong> {selectedForm?.name}</p>
+              <p><strong>Description:</strong> {selectedForm?.description || 'No description'}</p>
+              <p><strong>Fields:</strong> {selectedForm?.fields?.length || 0} field(s)</p>
+            </div>
+            <div className="p-4 bg-gray-50 rounded-lg">
+              <h4 className="font-medium mb-2">Recipient:</h4>
+              <p><strong>Name:</strong> {dealLead?.fullName}</p>
+              <p><strong>Phone:</strong> {dealLead?.phone || 'No phone number'}</p>
+              <p><strong>Company:</strong> {dealLead?.company || 'No company'}</p>
+            </div>
+            <div className="flex gap-2">
+              <Button
+                onClick={async () => {
+                  if (dealLead?.phone && selectedForm) {
+                    try {
+                      // Create form access token
+                      const accessData = {
+                        leadId: dealLead.id,
+                        expiryDays: 7,
+                        maxSubmissions: 1
+                      }
+                      
+                      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/crm/api'}/custom-forms/${selectedForm.id}/access`, {
+                        method: 'POST',
+                        headers: {
+                          'Content-Type': 'application/json',
+                          'Authorization': `Bearer ${localStorage.getItem('token')}`
+                        },
+                        body: JSON.stringify(accessData)
+                      })
+                      
+                      if (response.ok) {
+                        const accessResult = await response.json()
+                        const formUrl = `${window.location.origin}/forms/submit/${accessResult.accessToken}`
+                        const message = `Hi ${dealLead.fullName}! Please fill out this form: ${selectedForm.name}\n\n${selectedForm.description || ''}\n\nForm Link: ${formUrl}`
+                        const whatsappUrl = `https://wa.me/${dealLead.phone?.replace(/[^\d]/g, '')}?text=${encodeURIComponent(message)}`
+                        window.open(whatsappUrl, '_blank')
+                        setIsFormShareDialogOpen(false)
+                      } else {
+                        console.error('Failed to create form access')
+                        alert('Failed to create form access. Please try again.')
+                      }
+                    } catch (error) {
+                      console.error('Error creating form access:', error)
+                      alert('Error creating form access. Please try again.')
+                    }
+                  }
+                }}
+                disabled={!dealLead?.phone}
+                className="flex-1"
+              >
+                <MessageCircle className="h-4 w-4 mr-2" />
+                Send via WhatsApp
+              </Button>
+              <Button variant="outline" onClick={() => setIsFormShareDialogOpen(false)}>
+                Cancel
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
       </div>
     </AppLayout>
+  )
+}
+
+// Deal Form Component
+interface DealFormProps {
+  onSave: (data: any) => void
+  onCancel: () => void
+}
+
+function DealForm({ onSave, onCancel }: DealFormProps) {
+  const [formData, setFormData] = useState({
+    name: '',
+    description: '',
+    value: '',
+    status: 'OPEN',
+    probability: 0,
+    expectedCloseDate: '',
+    assignedUserId: ''
+  })
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    const submitData = {
+      ...formData,
+      value: parseFloat(formData.value) || 0,
+      probability: parseInt(formData.probability.toString()) || 0,
+      assignedUserId: formData.assignedUserId ? parseInt(formData.assignedUserId) : null,
+      expectedCloseDate: formData.expectedCloseDate ? `${formData.expectedCloseDate}T00:00:00` : null,
+      pipelineId: 1, // Default pipeline
+      stageId: 1 // Default stage
+    }
+    onSave(submitData)
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="space-y-2">
+        <Label htmlFor="name">Deal Name *</Label>
+        <Input
+          id="name"
+          value={formData.name}
+          onChange={(e) => setFormData({...formData, name: e.target.value})}
+          placeholder="Enter deal name"
+          required
+        />
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="description">Description</Label>
+        <Textarea
+          id="description"
+          value={formData.description}
+          onChange={(e) => setFormData({...formData, description: e.target.value})}
+          placeholder="Enter deal description"
+          rows={3}
+        />
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="value">Deal Value ($) *</Label>
+          <Input
+            id="value"
+            type="number"
+            step="0.01"
+            value={formData.value}
+            onChange={(e) => setFormData({...formData, value: e.target.value})}
+            placeholder="0.00"
+            required
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="probability">Probability (%)</Label>
+          <Input
+            id="probability"
+            type="number"
+            min="0"
+            max="100"
+            value={formData.probability}
+            onChange={(e) => setFormData({...formData, probability: parseInt(e.target.value) || 0})}
+            placeholder="0"
+          />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="status">Status</Label>
+          <select
+            id="status"
+            value={formData.status}
+            onChange={(e) => setFormData({...formData, status: e.target.value})}
+            className="w-full p-2 border rounded-md"
+          >
+            <option value="OPEN">Open</option>
+            <option value="WON">Won</option>
+            <option value="LOST">Lost</option>
+            <option value="CANCELLED">Cancelled</option>
+          </select>
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="expectedCloseDate">Expected Close Date</Label>
+          <Input
+            id="expectedCloseDate"
+            type="date"
+            value={formData.expectedCloseDate}
+            onChange={(e) => setFormData({...formData, expectedCloseDate: e.target.value})}
+          />
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="assignedUserId">Assigned User ID</Label>
+        <Input
+          id="assignedUserId"
+          type="number"
+          value={formData.assignedUserId}
+          onChange={(e) => setFormData({...formData, assignedUserId: e.target.value})}
+          placeholder="Enter user ID"
+        />
+      </div>
+
+      <div className="flex justify-end space-x-2 pt-4">
+        <Button type="button" variant="outline" onClick={onCancel}>
+          Cancel
+        </Button>
+        <Button type="submit">
+          Create Deal
+        </Button>
+      </div>
+    </form>
+  )
+}
+
+// Activity Form Component (simplified version for leads page)
+interface ActivityFormProps {
+  onSave: (data: any) => void
+  onCancel: () => void
+}
+
+function ActivityForm({ onSave, onCancel }: ActivityFormProps) {
+  const [formData, setFormData] = useState({
+    type: 'TASK',
+    subject: '',
+    description: '',
+    status: 'PENDING',
+    priority: 'MEDIUM',
+    dueDate: '',
+    assignedTo: '',
+    outcome: '',
+    duration: ''
+  })
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    const submitData = {
+      ...formData,
+      assignedTo: formData.assignedTo ? parseInt(formData.assignedTo) : 1, // Default to current user
+      duration: formData.duration ? parseInt(formData.duration) : null,
+      dueDate: formData.dueDate ? `${formData.dueDate}T09:00:00` : null
+    }
+    onSave(submitData)
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="type">Type</Label>
+          <select
+            id="type"
+            value={formData.type}
+            onChange={(e) => setFormData({...formData, type: e.target.value})}
+            className="w-full p-2 border rounded-md"
+          >
+            <option value="CALL">Call</option>
+            <option value="EMAIL">Email</option>
+            <option value="MEETING">Meeting</option>
+            <option value="TASK">Task</option>
+            <option value="NOTE">Note</option>
+          </select>
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="status">Status</Label>
+          <select
+            id="status"
+            value={formData.status}
+            onChange={(e) => setFormData({...formData, status: e.target.value})}
+            className="w-full p-2 border rounded-md"
+          >
+            <option value="PENDING">Pending</option>
+            <option value="IN_PROGRESS">In Progress</option>
+            <option value="COMPLETED">Completed</option>
+            <option value="CANCELLED">Cancelled</option>
+          </select>
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="subject">Subject *</Label>
+        <Input
+          id="subject"
+          value={formData.subject}
+          onChange={(e) => setFormData({...formData, subject: e.target.value})}
+          placeholder="Enter activity subject"
+          required
+        />
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="description">Description</Label>
+        <Textarea
+          id="description"
+          value={formData.description}
+          onChange={(e) => setFormData({...formData, description: e.target.value})}
+          placeholder="Enter activity description"
+          rows={3}
+        />
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="dueDate">Due Date</Label>
+          <Input
+            id="dueDate"
+            type="date"
+            value={formData.dueDate}
+            onChange={(e) => setFormData({...formData, dueDate: e.target.value})}
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="priority">Priority</Label>
+          <select
+            id="priority"
+            value={formData.priority}
+            onChange={(e) => setFormData({...formData, priority: e.target.value})}
+            className="w-full p-2 border rounded-md"
+          >
+            <option value="LOW">Low</option>
+            <option value="MEDIUM">Medium</option>
+            <option value="HIGH">High</option>
+            <option value="URGENT">Urgent</option>
+          </select>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="assignedTo">Assigned To (User ID)</Label>
+          <Input
+            id="assignedTo"
+            type="number"
+            value={formData.assignedTo}
+            onChange={(e) => setFormData({...formData, assignedTo: e.target.value})}
+            placeholder="Enter user ID"
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="duration">Duration (minutes)</Label>
+          <Input
+            id="duration"
+            type="number"
+            value={formData.duration}
+            onChange={(e) => setFormData({...formData, duration: e.target.value})}
+            placeholder="Enter duration"
+          />
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="outcome">Outcome</Label>
+        <Textarea
+          id="outcome"
+          value={formData.outcome}
+          onChange={(e) => setFormData({...formData, outcome: e.target.value})}
+          placeholder="Enter activity outcome"
+          rows={2}
+        />
+      </div>
+
+      <div className="flex justify-end space-x-2 pt-4">
+        <Button type="button" variant="outline" onClick={onCancel}>
+          Cancel
+        </Button>
+        <Button type="submit">
+          Create Activity
+        </Button>
+      </div>
+    </form>
+  )
+}
+
+// Contact Form Component for Lead Conversion
+interface ContactFormProps {
+  initialData?: Lead | null
+  onSave: (data: any) => void
+  onCancel: () => void
+}
+
+function ContactForm({ initialData, onSave, onCancel }: ContactFormProps) {
+  const [formData, setFormData] = useState({
+    firstName: initialData?.firstName || '',
+    lastName: initialData?.lastName || '',
+    email: initialData?.email || '',
+    phone: initialData?.phone || '',
+    jobTitle: initialData?.jobTitle || '',
+    department: '',
+    notes: initialData?.notes || '',
+    isActive: true
+  })
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    onSave(formData)
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="firstName">First Name *</Label>
+          <Input
+            id="firstName"
+            value={formData.firstName}
+            onChange={(e) => setFormData({...formData, firstName: e.target.value})}
+            placeholder="Enter first name"
+            required
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="lastName">Last Name *</Label>
+          <Input
+            id="lastName"
+            value={formData.lastName}
+            onChange={(e) => setFormData({...formData, lastName: e.target.value})}
+            placeholder="Enter last name"
+            required
+          />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="email">Email *</Label>
+          <Input
+            id="email"
+            type="email"
+            value={formData.email}
+            onChange={(e) => setFormData({...formData, email: e.target.value})}
+            placeholder="Enter email"
+            required
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="phone">Phone</Label>
+          <Input
+            id="phone"
+            value={formData.phone}
+            onChange={(e) => setFormData({...formData, phone: e.target.value})}
+            placeholder="Enter phone number"
+          />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="jobTitle">Job Title</Label>
+          <Input
+            id="jobTitle"
+            value={formData.jobTitle}
+            onChange={(e) => setFormData({...formData, jobTitle: e.target.value})}
+            placeholder="Enter job title"
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="department">Department</Label>
+          <Input
+            id="department"
+            value={formData.department}
+            onChange={(e) => setFormData({...formData, department: e.target.value})}
+            placeholder="Enter department"
+          />
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="notes">Notes</Label>
+        <Textarea
+          id="notes"
+          value={formData.notes}
+          onChange={(e) => setFormData({...formData, notes: e.target.value})}
+          placeholder="Enter additional notes"
+          rows={3}
+        />
+      </div>
+
+      <div className="flex justify-end space-x-2 pt-4">
+        <Button type="button" variant="outline" onClick={onCancel}>
+          Cancel
+        </Button>
+        <Button type="submit">
+          Convert to Contact
+        </Button>
+      </div>
+    </form>
   )
 }

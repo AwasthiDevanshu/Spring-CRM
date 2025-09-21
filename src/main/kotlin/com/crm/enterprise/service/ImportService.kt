@@ -106,7 +106,7 @@ class ImportService(
                         return@forEachIndexed
                     }
                     
-                    leadService.createLead(leadData, companyId)
+                    leadService.createLead(leadData, companyId, 1L) // Default to admin user
                     successCount++
                 } catch (e: Exception) {
                     if (e.message?.contains("Duplicate entry") == true || e.message?.contains("unique constraint") == true) {

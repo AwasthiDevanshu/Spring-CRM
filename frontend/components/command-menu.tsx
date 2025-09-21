@@ -16,7 +16,8 @@ import {
   MessageSquare,
   Settings,
   FileText,
-  Plus
+  Plus,
+  LogOut
 } from 'lucide-react'
 import { useAuth } from '@/hooks/use-auth'
 
@@ -42,6 +43,12 @@ const commandItems = [
       { name: 'Add Deal', href: '/deals', icon: Plus },
       { name: 'Add Activity', href: '/activities', icon: Plus },
     ]
+  },
+  {
+    group: 'Account',
+    items: [
+      { name: 'Logout', action: 'logout', icon: LogOut },
+    ]
   }
 ]
 
@@ -49,7 +56,7 @@ export function CommandMenu() {
   const [open, setOpen] = useState(false)
   const [search, setSearch] = useState('')
   const router = useRouter()
-  const { user } = useAuth()
+  const { user, logout } = useAuth()
 
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
@@ -63,9 +70,13 @@ export function CommandMenu() {
     return () => document.removeEventListener('keydown', down)
   }, [])
 
-  const handleSelect = (href: string) => {
+  const handleSelect = (item: any) => {
     setOpen(false)
-    router.push(href)
+    if (item.action === 'logout') {
+      logout()
+    } else if (item.href) {
+      router.push(item.href)
+    }
   }
 
   const filteredItems = commandItems.map(group => ({
@@ -107,7 +118,7 @@ export function CommandMenu() {
                     <CommandItem
                       key={item.name}
                       value={item.name}
-                      onSelect={() => handleSelect(item.href)}
+                      onSelect={() => handleSelect(item)}
                       className="flex items-center space-x-2"
                     >
                       <Icon className="h-4 w-4" />

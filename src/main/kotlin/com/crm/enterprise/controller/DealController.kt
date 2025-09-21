@@ -5,6 +5,7 @@ import com.crm.enterprise.dto.DealResponse
 import com.crm.enterprise.dto.DealUpdateRequest
 import com.crm.enterprise.entity.DealStatus
 import com.crm.enterprise.service.DealService
+import com.crm.enterprise.util.RequestUtils
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.Parameter
 import io.swagger.v3.oas.annotations.media.Content
@@ -12,6 +13,7 @@ import io.swagger.v3.oas.annotations.media.Schema
 import io.swagger.v3.oas.annotations.responses.ApiResponse
 import io.swagger.v3.oas.annotations.responses.ApiResponses
 import io.swagger.v3.oas.annotations.tags.Tag
+import jakarta.servlet.http.HttpServletRequest
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
 
@@ -19,7 +21,8 @@ import org.springframework.web.bind.annotation.*
 @RequestMapping("/api/deals")
 @Tag(name = "Deals Management", description = "Deal management endpoints for creating, reading, updating, and deleting deals")
 class DealController(
-    private val dealService: DealService
+    private val dealService: DealService,
+    private val requestUtils: RequestUtils
 ) {
     
     @PostMapping
@@ -43,10 +46,13 @@ class DealController(
     fun createDeal(
         @Parameter(description = "Deal information", required = true)
         @RequestBody dealRequest: DealRequest,
-        @Parameter(description = "Company ID", required = true)
-        @RequestParam companyId: Long
+        request: HttpServletRequest
     ): ResponseEntity<DealResponse> {
         return try {
+            val companyId = requestUtils.extractCompanyIdFromToken(request)
+            if (companyId == null) {
+                return ResponseEntity.badRequest().build()
+            }
             val deal = dealService.createDeal(dealRequest, companyId)
             ResponseEntity.ok(deal)
         } catch (e: Exception) {
@@ -69,8 +75,6 @@ class DealController(
         ]
     )
     fun getDeals(
-        @Parameter(description = "Company ID", required = true)
-        @RequestParam companyId: Long,
         @Parameter(description = "Deal status", required = false)
         @RequestParam(required = false) status: DealStatus?,
         @Parameter(description = "Assigned user ID", required = false)
@@ -78,9 +82,14 @@ class DealController(
         @Parameter(description = "Pipeline ID", required = false)
         @RequestParam(required = false) pipelineId: Long?,
         @Parameter(description = "Stage ID", required = false)
-        @RequestParam(required = false) stageId: Long?
+        @RequestParam(required = false) stageId: Long?,
+        request: HttpServletRequest
     ): ResponseEntity<List<DealResponse>> {
         return try {
+            val companyId = requestUtils.extractCompanyIdFromToken(request)
+            if (companyId == null) {
+                return ResponseEntity.badRequest().build()
+            }
             val deals = when {
                 status != null -> dealService.getDealsByStatus(companyId, status)
                 assignedUserId != null -> dealService.getDealsByAssignedUser(companyId, assignedUserId)
@@ -115,10 +124,13 @@ class DealController(
     fun getDeal(
         @Parameter(description = "Deal ID", required = true)
         @PathVariable id: Long,
-        @Parameter(description = "Company ID", required = true)
-        @RequestParam companyId: Long
+        request: HttpServletRequest
     ): ResponseEntity<DealResponse> {
         return try {
+            val companyId = requestUtils.extractCompanyIdFromToken(request)
+            if (companyId == null) {
+                return ResponseEntity.badRequest().build()
+            }
             val deal = dealService.getDealById(id, companyId)
             if (deal != null) {
                 ResponseEntity.ok(deal)
@@ -153,10 +165,13 @@ class DealController(
         @PathVariable id: Long,
         @Parameter(description = "Updated deal information", required = true)
         @RequestBody updateRequest: DealUpdateRequest,
-        @Parameter(description = "Company ID", required = true)
-        @RequestParam companyId: Long
+        request: HttpServletRequest
     ): ResponseEntity<DealResponse> {
         return try {
+            val companyId = requestUtils.extractCompanyIdFromToken(request)
+            if (companyId == null) {
+                return ResponseEntity.badRequest().build()
+            }
             val deal = dealService.updateDeal(id, updateRequest, companyId)
             if (deal != null) {
                 ResponseEntity.ok(deal)
@@ -188,10 +203,13 @@ class DealController(
     fun deleteDeal(
         @Parameter(description = "Deal ID", required = true)
         @PathVariable id: Long,
-        @Parameter(description = "Company ID", required = true)
-        @RequestParam companyId: Long
+        request: HttpServletRequest
     ): ResponseEntity<Void> {
         return try {
+            val companyId = requestUtils.extractCompanyIdFromToken(request)
+            if (companyId == null) {
+                return ResponseEntity.badRequest().build()
+            }
             val deleted = dealService.deleteDeal(id, companyId)
             if (deleted) {
                 ResponseEntity.noContent().build()
@@ -218,10 +236,13 @@ class DealController(
         ]
     )
     fun getDealAnalytics(
-        @Parameter(description = "Company ID", required = true)
-        @RequestParam companyId: Long
+        request: HttpServletRequest
     ): ResponseEntity<DealAnalytics> {
         return try {
+            val companyId = requestUtils.extractCompanyIdFromToken(request)
+            if (companyId == null) {
+                return ResponseEntity.badRequest().build()
+            }
             val analytics = dealService.getDealAnalytics(companyId)
             ResponseEntity.ok(analytics)
         } catch (e: Exception) {

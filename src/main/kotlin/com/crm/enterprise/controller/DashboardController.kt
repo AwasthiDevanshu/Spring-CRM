@@ -1,5 +1,6 @@
 package com.crm.enterprise.controller
 
+import com.crm.enterprise.util.RequestUtils
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.Parameter
 import io.swagger.v3.oas.annotations.media.Content
@@ -7,6 +8,7 @@ import io.swagger.v3.oas.annotations.media.Schema
 import io.swagger.v3.oas.annotations.responses.ApiResponse
 import io.swagger.v3.oas.annotations.responses.ApiResponses
 import io.swagger.v3.oas.annotations.tags.Tag
+import jakarta.servlet.http.HttpServletRequest
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
 import java.math.BigDecimal
@@ -15,7 +17,9 @@ import java.time.LocalDateTime
 @RestController
 @RequestMapping("/api/dashboard")
 @Tag(name = "Dashboard Analytics", description = "Dashboard analytics and KPI endpoints")
-class DashboardController {
+class DashboardController(
+    private val requestUtils: RequestUtils
+) {
 
     @GetMapping("/stats")
     @Operation(
@@ -32,9 +36,12 @@ class DashboardController {
         ]
     )
     fun getDashboardStats(
-        @Parameter(description = "Company ID", required = true)
-        @RequestParam companyId: Long
+        request: HttpServletRequest
     ): ResponseEntity<DashboardStats> {
+        val companyId = requestUtils.extractCompanyIdFromToken(request)
+        if (companyId == null) {
+            return ResponseEntity.badRequest().build()
+        }
         // Mock data - in production, this would come from services
         val stats = DashboardStats(
             totalLeads = 156,
@@ -70,11 +77,14 @@ class DashboardController {
         description = "Get leads data for chart visualization"
     )
     fun getLeadsChartData(
-        @Parameter(description = "Company ID", required = true)
-        @RequestParam companyId: Long,
         @Parameter(description = "Number of days", required = false)
-        @RequestParam(defaultValue = "30") days: Int
+        @RequestParam(defaultValue = "30") days: Int,
+        request: HttpServletRequest
     ): ResponseEntity<LeadsChartData> {
+        val companyId = requestUtils.extractCompanyIdFromToken(request)
+        if (companyId == null) {
+            return ResponseEntity.badRequest().build()
+        }
         // Mock data for chart
         val chartData = LeadsChartData(
             labels = listOf("Week 1", "Week 2", "Week 3", "Week 4"),
@@ -91,11 +101,14 @@ class DashboardController {
         description = "Get revenue data for chart visualization"
     )
     fun getRevenueChartData(
-        @Parameter(description = "Company ID", required = true)
-        @RequestParam companyId: Long,
         @Parameter(description = "Number of months", required = false)
-        @RequestParam(defaultValue = "12") months: Int
+        @RequestParam(defaultValue = "12") months: Int,
+        request: HttpServletRequest
     ): ResponseEntity<RevenueChartData> {
+        val companyId = requestUtils.extractCompanyIdFromToken(request)
+        if (companyId == null) {
+            return ResponseEntity.badRequest().build()
+        }
         // Mock data for revenue chart
         val chartData = RevenueChartData(
             labels = listOf("Jan", "Feb", "Mar", "Apr", "May", "Jun"),

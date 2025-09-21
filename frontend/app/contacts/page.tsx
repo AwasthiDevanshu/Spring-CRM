@@ -1,10 +1,14 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useAuth } from '@/hooks/use-auth'
+import { useContacts, useCreateContact, useUpdateContact, useDeleteContact } from '@/hooks/use-contacts'
+import { useCreateDeal } from '@/hooks/use-deals'
+import { useCreateActivity } from '@/hooks/use-activities'
+import { useCustomForms } from '@/hooks/use-custom-forms'
+import WhatsAppButton from '@/components/ui/whatsapp-button'
+import { FormInput, MessageCircle } from 'lucide-react'
 import { useRouter } from 'next/navigation'
-import { getAuthHeader } from '@/lib/auth'
-import { buildApiUrl, API_ENDPOINTS } from '@/lib/api-config'
 import { AppLayout } from '@/components/app-layout'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -12,7 +16,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
 import { 
   Plus, 
   Search, 
@@ -28,9 +34,10 @@ import {
   Trash2,
   Users,
   UserCheck,
-  UserX
+  UserX,
+  DollarSign,
+  Activity
 } from 'lucide-react'
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 
 interface Contact {
   id: number
@@ -52,14 +59,38 @@ interface Contact {
 
 export default function ContactsPage() {
   const { user, isAuthenticated, isLoading } = useAuth()
+  const { data: contacts = [], isLoading: isLoadingContacts, error } = useContacts()
+  const { data: forms = [] } = useCustomForms()
+  const createContactMutation = useCreateContact()
+  const updateContactMutation = useUpdateContact()
+  const deleteContactMutation = useDeleteContact()
+  const createDealMutation = useCreateDeal()
+  const createActivityMutation = useCreateActivity()
   const router = useRouter()
-  const [contacts, setContacts] = useState<Contact[]>([])
-  const [filteredContacts, setFilteredContacts] = useState<Contact[]>([])
+
+  // Check if user is admin
+  const isAdmin = user?.isCompanyAdmin || user?.isSuperuser
+  
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState('ALL')
-  const [isLoadingContacts, setIsLoadingContacts] = useState(true)
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
   const [selectedContact, setSelectedContact] = useState<Contact | null>(null)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isCreateDealDialogOpen, setIsCreateDealDialogOpen] = useState(false)
+  const [isCreateActivityDialogOpen, setIsCreateActivityDialogOpen] = useState(false)
+  const [isFormShareDialogOpen, setIsFormShareDialogOpen] = useState(false)
+  const [dealContact, setDealContact] = useState<Contact | null>(null)
+  const [activityContact, setActivityContact] = useState<Contact | null>(null)
+  const [selectedForm, setSelectedForm] = useState<any>(null)
+  const [formData, setFormData] = useState({
+    firstName: '',
+    lastName: '',
+    email: '',
+    phone: '',
+    jobTitle: '',
+    department: '',
+    notes: ''
+  })
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -67,37 +98,8 @@ export default function ContactsPage() {
     }
   }, [isAuthenticated, isLoading, router])
 
-  useEffect(() => {
-    if (isAuthenticated) {
-      fetchContacts()
-    }
-  }, [isAuthenticated])
-
-  useEffect(() => {
-    filterContacts()
-  }, [contacts, searchTerm, statusFilter])
-
-  const fetchContacts = async () => {
-    try {
-      setIsLoadingContacts(true)
-      const response = await fetch(buildApiUrl(API_ENDPOINTS.CONTACTS.LIST, user?.companyId || 1), {
-        headers: {
-          'Authorization': `Bearer ${getAuthHeader() || ''}`
-        }
-      })
-      
-      if (response.ok) {
-        const data = await response.json()
-        setContacts(data)
-      }
-    } catch (error) {
-      console.error('Error fetching contacts:', error)
-    } finally {
-      setIsLoadingContacts(false)
-    }
-  }
-
-  const filterContacts = () => {
+  // Memoized filtering for better performance
+  const filteredContacts = useMemo(() => {
     let filtered = contacts
 
     if (searchTerm) {
@@ -115,7 +117,40 @@ export default function ContactsPage() {
       filtered = filtered.filter(contact => !contact.isActive)
     }
 
-    setFilteredContacts(filtered)
+    return filtered
+  }, [contacts, searchTerm, statusFilter])
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }))
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (isSubmitting) return
+
+    try {
+      setIsSubmitting(true)
+      await createContactMutation.mutateAsync(formData)
+      setFormData({
+        firstName: '',
+        lastName: '',
+        email: '',
+        phone: '',
+        jobTitle: '',
+        department: '',
+        notes: ''
+      })
+      setIsCreateDialogOpen(false)
+    } catch (error) {
+      console.error('Error creating contact:', error)
+      alert('Failed to create contact. Please try again.')
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   const getStatusBadge = (isActive: boolean) => {
@@ -128,22 +163,56 @@ export default function ContactsPage() {
 
   const handleCreateContact = async (contactData: any) => {
     try {
-      const response = await fetch(buildApiUrl(API_ENDPOINTS.CONTACTS.LIST, user?.companyId || 1), {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${getAuthHeader() || ''}`
-        },
-        body: JSON.stringify(contactData)
-      })
-
-      if (response.ok) {
-        await fetchContacts()
-        setIsCreateDialogOpen(false)
-      }
+      await createContactMutation.mutateAsync(contactData)
+      setIsCreateDialogOpen(false)
     } catch (error) {
       console.error('Error creating contact:', error)
     }
+  }
+
+  const handleCreateDeal = (contact: Contact) => {
+    setDealContact(contact)
+    setIsCreateDealDialogOpen(true)
+  }
+
+  const handleCreateActivity = (contact: Contact) => {
+    setActivityContact(contact)
+    setIsCreateActivityDialogOpen(true)
+  }
+
+  const handleDealSubmit = async (dealData: any) => {
+    try {
+      const dealWithContact = {
+        ...dealData,
+        contactId: dealContact?.id
+      }
+      await createDealMutation.mutateAsync(dealWithContact)
+      setIsCreateDealDialogOpen(false)
+      setDealContact(null)
+    } catch (error) {
+      console.error('Error creating deal:', error)
+    }
+  }
+
+  const handleActivitySubmit = async (activityData: any) => {
+    try {
+      const activityWithContact = {
+        ...activityData,
+        entityType: 'CONTACT',
+        entityId: activityContact?.id
+      }
+      await createActivityMutation.mutateAsync(activityWithContact)
+      setIsCreateActivityDialogOpen(false)
+      setActivityContact(null)
+    } catch (error) {
+      console.error('Error creating activity:', error)
+    }
+  }
+
+  const handleFormShare = (contact: Contact, form: any) => {
+    setSelectedForm(form)
+    setDealContact(contact) // Reuse dealContact state for form sharing
+    setIsFormShareDialogOpen(true)
   }
 
   if (isLoading) {
@@ -207,9 +276,12 @@ export default function ContactsPage() {
               </select>
             </div>
             <div className="flex items-end">
-              <Button variant="outline" onClick={fetchContacts}>
+              <Button variant="outline" onClick={() => {
+                setSearchTerm('')
+                setStatusFilter('ALL')
+              }}>
                 <Filter className="mr-2 h-4 w-4" />
-                Apply Filters
+                Clear Filters
               </Button>
             </div>
           </div>
@@ -338,6 +410,37 @@ export default function ContactsPage() {
                     <Button variant="ghost" size="sm">
                       <Edit className="h-4 w-4" />
                     </Button>
+                    <WhatsAppButton
+                      contact={{
+                        name: contact.fullName,
+                        phone: contact.phone || '',
+                        company: contact.jobTitle || '',
+                        email: contact.email
+                      }}
+                      variant="ghost"
+                      size="sm"
+                      showLabel={false}
+                    />
+                    {forms.length > 0 && (
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="sm" title="Share Form">
+                            <FormInput className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          {forms.map((form) => (
+                            <DropdownMenuItem
+                              key={form.id}
+                              onClick={() => handleFormShare(contact, form)}
+                            >
+                              <FormInput className="mr-2 h-4 w-4" />
+                              {form.name}
+                            </DropdownMenuItem>
+                          ))}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    )}
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button variant="ghost" size="sm">
@@ -348,6 +451,14 @@ export default function ContactsPage() {
                         <DropdownMenuItem>
                           <Edit className="mr-2 h-4 w-4" />
                           Edit
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleCreateDeal(contact)}>
+                          <DollarSign className="mr-2 h-4 w-4" />
+                          Create Deal
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleCreateActivity(contact)}>
+                          <Activity className="mr-2 h-4 w-4" />
+                          Create Activity
                         </DropdownMenuItem>
                         <DropdownMenuItem className="text-red-600">
                           <Trash2 className="mr-2 h-4 w-4" />
@@ -372,47 +483,218 @@ export default function ContactsPage() {
               Add a new contact to your CRM system. Fill in the details below.
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="firstName">First Name</Label>
-                <Input id="firstName" placeholder="Enter first name" />
+                <Label htmlFor="firstName">First Name *</Label>
+                <Input 
+                  id="firstName" 
+                  name="firstName"
+                  value={formData.firstName}
+                  onChange={handleInputChange}
+                  placeholder="Enter first name" 
+                  required
+                />
               </div>
               <div>
-                <Label htmlFor="lastName">Last Name</Label>
-                <Input id="lastName" placeholder="Enter last name" />
+                <Label htmlFor="lastName">Last Name *</Label>
+                <Input 
+                  id="lastName" 
+                  name="lastName"
+                  value={formData.lastName}
+                  onChange={handleInputChange}
+                  placeholder="Enter last name" 
+                  required
+                />
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="email">Email</Label>
-                <Input id="email" type="email" placeholder="Enter email" />
+                <Label htmlFor="email">Email *</Label>
+                <Input 
+                  id="email" 
+                  name="email"
+                  type="email" 
+                  value={formData.email}
+                  onChange={handleInputChange}
+                  placeholder="Enter email" 
+                  required
+                />
               </div>
               <div>
                 <Label htmlFor="phone">Phone</Label>
-                <Input id="phone" placeholder="Enter phone number" />
+                <Input 
+                  id="phone" 
+                  name="phone"
+                  value={formData.phone}
+                  onChange={handleInputChange}
+                  placeholder="Enter phone number" 
+                />
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="jobTitle">Job Title</Label>
-                <Input id="jobTitle" placeholder="Enter job title" />
+                <Input 
+                  id="jobTitle" 
+                  name="jobTitle"
+                  value={formData.jobTitle}
+                  onChange={handleInputChange}
+                  placeholder="Enter job title" 
+                />
               </div>
               <div>
                 <Label htmlFor="department">Department</Label>
-                <Input id="department" placeholder="Enter department" />
+                <Input 
+                  id="department" 
+                  name="department"
+                  value={formData.department}
+                  onChange={handleInputChange}
+                  placeholder="Enter department" 
+                />
               </div>
             </div>
             <div>
               <Label htmlFor="notes">Notes</Label>
-              <Input id="notes" placeholder="Enter notes" />
+              <Input 
+                id="notes" 
+                name="notes"
+                value={formData.notes}
+                onChange={handleInputChange}
+                placeholder="Enter notes" 
+              />
             </div>
             <div className="flex justify-end space-x-2">
-              <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={() => setIsCreateDialogOpen(false)}
+              >
                 Cancel
               </Button>
-              <Button onClick={() => setIsCreateDialogOpen(false)}>
-                Create Contact
+              <Button 
+                type="submit" 
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? 'Creating...' : 'Create Contact'}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Create Deal Dialog */}
+      <Dialog open={isCreateDealDialogOpen} onOpenChange={setIsCreateDealDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <DollarSign className="h-5 w-5" />
+              Create Deal for {dealContact?.fullName}
+            </DialogTitle>
+            <DialogDescription>
+              Create a new deal linked to this contact.
+            </DialogDescription>
+          </DialogHeader>
+          <DealForm
+            onSave={handleDealSubmit}
+            onCancel={() => {
+              setIsCreateDealDialogOpen(false)
+              setDealContact(null)
+            }}
+          />
+        </DialogContent>
+      </Dialog>
+
+      {/* Create Activity Dialog */}
+      <Dialog open={isCreateActivityDialogOpen} onOpenChange={setIsCreateActivityDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Activity className="h-5 w-5" />
+              Create Activity for {activityContact?.fullName}
+            </DialogTitle>
+            <DialogDescription>
+              Create a new activity linked to this contact.
+            </DialogDescription>
+          </DialogHeader>
+          <ActivityForm
+            onSave={handleActivitySubmit}
+            onCancel={() => {
+              setIsCreateActivityDialogOpen(false)
+              setActivityContact(null)
+            }}
+          />
+        </DialogContent>
+      </Dialog>
+
+      {/* Form Share Dialog */}
+      <Dialog open={isFormShareDialogOpen} onOpenChange={setIsFormShareDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Share Form via WhatsApp</DialogTitle>
+            <DialogDescription>
+              Send the "{selectedForm?.name}" form to {dealContact?.fullName} via WhatsApp
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="p-4 bg-gray-50 rounded-lg">
+              <h4 className="font-medium mb-2">Form Details:</h4>
+              <p><strong>Name:</strong> {selectedForm?.name}</p>
+              <p><strong>Description:</strong> {selectedForm?.description || 'No description'}</p>
+              <p><strong>Fields:</strong> {selectedForm?.fields?.length || 0} field(s)</p>
+            </div>
+            <div className="p-4 bg-gray-50 rounded-lg">
+              <h4 className="font-medium mb-2">Recipient:</h4>
+              <p><strong>Name:</strong> {dealContact?.fullName}</p>
+              <p><strong>Phone:</strong> {dealContact?.phone || 'No phone number'}</p>
+              <p><strong>Job Title:</strong> {dealContact?.jobTitle || 'No job title'}</p>
+            </div>
+            <div className="flex gap-2">
+              <Button
+                onClick={async () => {
+                  if (dealContact?.phone && selectedForm) {
+                    try {
+                      // Create form access token
+                      const accessData = {
+                        contactId: dealContact.id,
+                        expiryDays: 7,
+                        maxSubmissions: 1
+                      }
+                      
+                      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/crm/api'}/custom-forms/${selectedForm.id}/access`, {
+                        method: 'POST',
+                        headers: {
+                          'Content-Type': 'application/json',
+                          'Authorization': `Bearer ${localStorage.getItem('token')}`
+                        },
+                        body: JSON.stringify(accessData)
+                      })
+                      
+                      if (response.ok) {
+                        const accessResult = await response.json()
+                        const formUrl = `${window.location.origin}/forms/submit/${accessResult.accessToken}`
+                        const message = `Hi ${dealContact.fullName}! Please fill out this form: ${selectedForm.name}\n\n${selectedForm.description || ''}\n\nForm Link: ${formUrl}`
+                        const whatsappUrl = `https://wa.me/${dealContact.phone.replace(/[^\d]/g, '')}?text=${encodeURIComponent(message)}`
+                        window.open(whatsappUrl, '_blank')
+                        setIsFormShareDialogOpen(false)
+                      } else {
+                        console.error('Failed to create form access')
+                        alert('Failed to create form access. Please try again.')
+                      }
+                    } catch (error) {
+                      console.error('Error creating form access:', error)
+                      alert('Error creating form access. Please try again.')
+                    }
+                  }
+                }}
+                disabled={!dealContact?.phone}
+                className="flex-1"
+              >
+                <MessageCircle className="h-4 w-4 mr-2" />
+                Send via WhatsApp
+              </Button>
+              <Button variant="outline" onClick={() => setIsFormShareDialogOpen(false)}>
+                Cancel
               </Button>
             </div>
           </div>
@@ -420,5 +702,294 @@ export default function ContactsPage() {
       </Dialog>
       </div>
     </AppLayout>
+  )
+}
+
+// Deal Form Component (reused from leads page)
+interface DealFormProps {
+  onSave: (data: any) => void
+  onCancel: () => void
+}
+
+function DealForm({ onSave, onCancel }: DealFormProps) {
+  const [formData, setFormData] = useState({
+    name: '',
+    description: '',
+    value: '',
+    status: 'OPEN',
+    probability: 0,
+    expectedCloseDate: '',
+    assignedUserId: ''
+  })
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    const submitData = {
+      ...formData,
+      value: parseFloat(formData.value) || 0,
+      probability: parseInt(formData.probability.toString()) || 0,
+      assignedUserId: formData.assignedUserId ? parseInt(formData.assignedUserId) : null,
+      expectedCloseDate: formData.expectedCloseDate ? `${formData.expectedCloseDate}T00:00:00` : null,
+      pipelineId: 1, // Default pipeline
+      stageId: 1 // Default stage
+    }
+    onSave(submitData)
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="space-y-2">
+        <Label htmlFor="name">Deal Name *</Label>
+        <Input
+          id="name"
+          value={formData.name}
+          onChange={(e) => setFormData({...formData, name: e.target.value})}
+          placeholder="Enter deal name"
+          required
+        />
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="description">Description</Label>
+        <Textarea
+          id="description"
+          value={formData.description}
+          onChange={(e) => setFormData({...formData, description: e.target.value})}
+          placeholder="Enter deal description"
+          rows={3}
+        />
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="value">Deal Value ($) *</Label>
+          <Input
+            id="value"
+            type="number"
+            step="0.01"
+            value={formData.value}
+            onChange={(e) => setFormData({...formData, value: e.target.value})}
+            placeholder="0.00"
+            required
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="probability">Probability (%)</Label>
+          <Input
+            id="probability"
+            type="number"
+            min="0"
+            max="100"
+            value={formData.probability}
+            onChange={(e) => setFormData({...formData, probability: parseInt(e.target.value) || 0})}
+            placeholder="0"
+          />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="status">Status</Label>
+          <select
+            id="status"
+            value={formData.status}
+            onChange={(e) => setFormData({...formData, status: e.target.value})}
+            className="w-full p-2 border rounded-md"
+          >
+            <option value="OPEN">Open</option>
+            <option value="WON">Won</option>
+            <option value="LOST">Lost</option>
+            <option value="CANCELLED">Cancelled</option>
+          </select>
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="expectedCloseDate">Expected Close Date</Label>
+          <Input
+            id="expectedCloseDate"
+            type="date"
+            value={formData.expectedCloseDate}
+            onChange={(e) => setFormData({...formData, expectedCloseDate: e.target.value})}
+          />
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="assignedUserId">Assigned User ID</Label>
+        <Input
+          id="assignedUserId"
+          type="number"
+          value={formData.assignedUserId}
+          onChange={(e) => setFormData({...formData, assignedUserId: e.target.value})}
+          placeholder="Enter user ID"
+        />
+      </div>
+
+      <div className="flex justify-end space-x-2 pt-4">
+        <Button type="button" variant="outline" onClick={onCancel}>
+          Cancel
+        </Button>
+        <Button type="submit">
+          Create Deal
+        </Button>
+      </div>
+    </form>
+  )
+}
+
+// Activity Form Component (simplified version for contacts page)
+interface ActivityFormProps {
+  onSave: (data: any) => void
+  onCancel: () => void
+}
+
+function ActivityForm({ onSave, onCancel }: ActivityFormProps) {
+  const [formData, setFormData] = useState({
+    type: 'TASK',
+    subject: '',
+    description: '',
+    status: 'PENDING',
+    priority: 'MEDIUM',
+    dueDate: '',
+    assignedTo: '',
+    outcome: '',
+    duration: ''
+  })
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    const submitData = {
+      ...formData,
+      assignedTo: formData.assignedTo ? parseInt(formData.assignedTo) : 1, // Default to current user
+      duration: formData.duration ? parseInt(formData.duration) : null,
+      dueDate: formData.dueDate ? `${formData.dueDate}T09:00:00` : null
+    }
+    onSave(submitData)
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="type">Type</Label>
+          <select
+            id="type"
+            value={formData.type}
+            onChange={(e) => setFormData({...formData, type: e.target.value})}
+            className="w-full p-2 border rounded-md"
+          >
+            <option value="CALL">Call</option>
+            <option value="EMAIL">Email</option>
+            <option value="MEETING">Meeting</option>
+            <option value="TASK">Task</option>
+            <option value="NOTE">Note</option>
+          </select>
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="status">Status</Label>
+          <select
+            id="status"
+            value={formData.status}
+            onChange={(e) => setFormData({...formData, status: e.target.value})}
+            className="w-full p-2 border rounded-md"
+          >
+            <option value="PENDING">Pending</option>
+            <option value="IN_PROGRESS">In Progress</option>
+            <option value="COMPLETED">Completed</option>
+            <option value="CANCELLED">Cancelled</option>
+          </select>
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="subject">Subject *</Label>
+        <Input
+          id="subject"
+          value={formData.subject}
+          onChange={(e) => setFormData({...formData, subject: e.target.value})}
+          placeholder="Enter activity subject"
+          required
+        />
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="description">Description</Label>
+        <Textarea
+          id="description"
+          value={formData.description}
+          onChange={(e) => setFormData({...formData, description: e.target.value})}
+          placeholder="Enter activity description"
+          rows={3}
+        />
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="dueDate">Due Date</Label>
+          <Input
+            id="dueDate"
+            type="date"
+            value={formData.dueDate}
+            onChange={(e) => setFormData({...formData, dueDate: e.target.value})}
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="priority">Priority</Label>
+          <select
+            id="priority"
+            value={formData.priority}
+            onChange={(e) => setFormData({...formData, priority: e.target.value})}
+            className="w-full p-2 border rounded-md"
+          >
+            <option value="LOW">Low</option>
+            <option value="MEDIUM">Medium</option>
+            <option value="HIGH">High</option>
+            <option value="URGENT">Urgent</option>
+          </select>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="assignedTo">Assigned To (User ID)</Label>
+          <Input
+            id="assignedTo"
+            type="number"
+            value={formData.assignedTo}
+            onChange={(e) => setFormData({...formData, assignedTo: e.target.value})}
+            placeholder="Enter user ID"
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="duration">Duration (minutes)</Label>
+          <Input
+            id="duration"
+            type="number"
+            value={formData.duration}
+            onChange={(e) => setFormData({...formData, duration: e.target.value})}
+            placeholder="Enter duration"
+          />
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="outcome">Outcome</Label>
+        <Textarea
+          id="outcome"
+          value={formData.outcome}
+          onChange={(e) => setFormData({...formData, outcome: e.target.value})}
+          placeholder="Enter activity outcome"
+          rows={2}
+        />
+      </div>
+
+      <div className="flex justify-end space-x-2 pt-4">
+        <Button type="button" variant="outline" onClick={onCancel}>
+          Cancel
+        </Button>
+        <Button type="submit">
+          Create Activity
+        </Button>
+      </div>
+    </form>
   )
 }

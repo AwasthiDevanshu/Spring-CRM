@@ -4,19 +4,45 @@ spring:
   profiles:
     active: dev
   
-  # Database Configuration
+  # Database Configuration - MySQL
   datasource:
     url: jdbc:mysql://94.250.203.219:3306/crm?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
     username: crm
     password: Xi3LtPT3KD53tCyz
     driver-class-name: com.mysql.cj.jdbc.Driver
     hikari:
-      maximum-pool-size: 10
-      minimum-idle: 5
+      # Connection Pool Settings - Reduced to prevent "too many connections" error
+      maximum-pool-size: 5
+      minimum-idle: 1
       idle-timeout: 300000
       connection-timeout: 20000
-      max-lifetime: 600000
+      max-lifetime: 1200000
       leak-detection-threshold: 60000
+      
+      # Connection Validation
+      connection-test-query: "SELECT 1"
+      validation-timeout: 5000
+      
+      # Pool Management
+      pool-name: "CRM-HikariCP"
+      register-mbeans: true
+      
+      # MySQL Specific Optimizations
+      data-source-properties:
+        cachePrepStmts: true
+        prepStmtCacheSize: 250
+        prepStmtCacheSqlLimit: 2048
+        useServerPrepStmts: true
+        useLocalSessionState: true
+        rewriteBatchedStatements: true
+        cacheResultSetMetadata: true
+        cacheServerConfiguration: true
+        elideSetAutoCommits: true
+        maintainTimeStats: false
+        autoReconnect: true
+        autoReconnectForPools: true
+        maxReconnects: 3
+        initialTimeout: 2
   
   # SQL Initialization
   sql:
@@ -63,3 +89,7 @@ springdoc:
     operationsSorter: method
     tagsSorter: alpha
   packages-to-scan: com.crm.enterprise.controller
+
+# JWT Configuration
+jwt:
+  secret: your-secret-key-here-make-it-long-enough-for-hs256-algorithm

@@ -1,6 +1,7 @@
 'use client'
 
 import { motion } from 'framer-motion'
+import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { 
@@ -85,6 +86,11 @@ const quickActions = [
 
 export function QuickActions() {
   const { user } = useAuth()
+  const router = useRouter()
+
+  const handleActionClick = (href: string) => {
+    router.push(href)
+  }
 
   return (
     <motion.div
@@ -114,21 +120,19 @@ export function QuickActions() {
                   <Button
                     variant="ghost"
                     className="h-auto p-4 w-full justify-start hover:bg-muted/50 transition-colors"
-                    asChild
+                    onClick={() => handleActionClick(action.href)}
                   >
-                    <a href={action.href}>
-                      <div className="flex items-center space-x-3">
-                        <div className={`p-2 rounded-lg ${action.bgColor}`}>
-                          <Icon className={`h-5 w-5 ${action.color}`} />
-                        </div>
-                        <div className="text-left">
-                          <div className="font-medium">{action.title}</div>
-                          <div className="text-sm text-muted-foreground">
-                            {action.description}
-                          </div>
+                    <div className="flex items-center space-x-3">
+                      <div className={`p-2 rounded-lg ${action.bgColor}`}>
+                        <Icon className={`h-5 w-5 ${action.color}`} />
+                      </div>
+                      <div className="text-left">
+                        <div className="font-medium">{action.title}</div>
+                        <div className="text-sm text-muted-foreground">
+                          {action.description}
                         </div>
                       </div>
-                    </a>
+                    </div>
                   </Button>
                 </motion.div>
               )

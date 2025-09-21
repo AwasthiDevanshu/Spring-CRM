@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from 'react'
 import { useAuth } from '@/hooks/use-auth'
+import { useApi } from '@/hooks/use-api'
 import { useRouter } from 'next/navigation'
-import { getAuthHeader } from '@/lib/auth'
 import { AppLayout } from '@/components/app-layout'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -72,6 +72,7 @@ const importTypes = [
 
 export default function ImportPage() {
   const { user, isAuthenticated, isLoading } = useAuth()
+  const { companyId, importCsv } = useApi()
   const router = useRouter()
   const { toast } = useToast()
   const [activeTab, setActiveTab] = useState('leads')
@@ -156,22 +157,9 @@ export default function ImportPage() {
       const formData = new FormData()
       formData.append('file', file)
       formData.append('entityType', type === 'leads' ? 'LEAD' : type === 'contacts' ? 'CONTACT' : 'DEAL')
-      formData.append('companyId', String(user?.companyId || 1))
+      formData.append('companyId', String(companyId))
 
-      const response = await fetch('http://localhost:8080/crm/api/import/csv', {
-        method: 'POST',
-        headers: {
-          'Authorization': getAuthHeader() || ''
-        },
-        body: formData
-      })
-
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.message || 'Upload failed')
-      }
-
-      const result = await response.json()
+      const result = await importCsv(formData)
       setUploadProgress(100)
 
       const newImport: ImportResult = {

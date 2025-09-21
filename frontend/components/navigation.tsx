@@ -21,7 +21,9 @@ import {
   Menu,
   X,
   Upload,
-  Download
+  Download,
+  LogOut,
+  FormInput
 } from 'lucide-react'
 import { useAuth } from '@/hooks/use-auth'
 
@@ -31,6 +33,7 @@ const navigation = [
   { name: 'Contacts', href: '/contacts', icon: UserCheck },
   { name: 'Deals', href: '/deals', icon: Target },
   { name: 'Activities', href: '/activities', icon: Activity },
+  { name: 'Forms', href: '/forms', icon: FormInput },
   { name: 'Import Data', href: '/import', icon: Upload },
   { name: 'Reports', href: '/reports', icon: BarChart3 },
   { name: 'Integrations', href: '/integrations', icon: MessageSquare },
@@ -40,7 +43,7 @@ const navigation = [
 export function Navigation() {
   const [isOpen, setIsOpen] = useState(false)
   const pathname = usePathname()
-  const { user } = useAuth()
+  const { user, logout } = useAuth()
   // Temporarily disable dynamic counts to fix UI
   const counts = {
     leads: 0,
@@ -142,6 +145,15 @@ export function Navigation() {
                 </p>
               </div>
             </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={logout}
+              className="w-full mt-3 justify-start text-muted-foreground hover:text-foreground"
+            >
+              <LogOut className="mr-2 h-4 w-4" />
+              Logout
+            </Button>
           </div>
         </div>
       </div>

@@ -1,10 +1,12 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useAuth } from '@/hooks/use-auth'
+import { useActivities, useCreateActivity, useUpdateActivity, useDeleteActivity } from '@/hooks/use-activities'
+import { useLeads } from '@/hooks/use-leads'
+import { useContacts } from '@/hooks/use-contacts'
+import { useDeals } from '@/hooks/use-deals'
 import { useRouter } from 'next/navigation'
-import { getAuthHeader } from '@/lib/auth'
-import { buildApiUrl, API_ENDPOINTS } from '@/lib/api-config'
 import { AppLayout } from '@/components/app-layout'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -43,10 +45,17 @@ interface Activity {
   dueDate?: string
   status: string
   priority: string
-  assignedUserId?: number
-  relatedEntityType?: string
-  relatedEntityId?: number
+  assignedTo: number
+  assignedToName?: string
+  assignedBy: number
+  assignedByName?: string
+  entityType?: string
+  entityId?: number
+  entityName?: string
+  outcome?: string
+  duration?: number
   companyId: number
+  activityDate: string
   createdAt: string
   updatedAt: string
 }
@@ -76,13 +85,17 @@ const priorities = [
 
 export default function ActivitiesPage() {
   const { user, isAuthenticated, isLoading } = useAuth()
+  const { data: activities = [], isLoading: isLoadingActivities, error } = useActivities()
+  const { data: leads = [] } = useLeads()
+  const { data: contacts = [] } = useContacts()
+  const { data: deals = [] } = useDeals()
+  const createActivityMutation = useCreateActivity()
+  const updateActivityMutation = useUpdateActivity()
+  const deleteActivityMutation = useDeleteActivity()
   const router = useRouter()
-  const [activities, setActivities] = useState<Activity[]>([])
-  const [filteredActivities, setFilteredActivities] = useState<Activity[]>([])
   const [searchTerm, setSearchTerm] = useState('')
   const [typeFilter, setTypeFilter] = useState('ALL')
   const [statusFilter, setStatusFilter] = useState('ALL')
-  const [isLoadingActivities, setIsLoadingActivities] = useState(true)
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
   const [selectedActivity, setSelectedActivity] = useState<Activity | null>(null)
 
@@ -92,43 +105,16 @@ export default function ActivitiesPage() {
     }
   }, [isAuthenticated, isLoading, router])
 
-  useEffect(() => {
-    if (isAuthenticated) {
-      fetchActivities()
-    }
-  }, [isAuthenticated])
-
-  useEffect(() => {
-    filterActivities()
-  }, [activities, searchTerm, typeFilter, statusFilter])
-
-  const fetchActivities = async () => {
-    try {
-      setIsLoadingActivities(true)
-      const response = await fetch(buildApiUrl(API_ENDPOINTS.ACTIVITIES.LIST, user?.companyId || 1), {
-        headers: {
-          'Authorization': getAuthHeader() || ''
-        }
-      })
-      
-      if (response.ok) {
-        const data = await response.json()
-        setActivities(data)
-      }
-    } catch (error) {
-      console.error('Error fetching activities:', error)
-    } finally {
-      setIsLoadingActivities(false)
-    }
-  }
-
-  const filterActivities = () => {
+  // Memoized filtering for better performance
+  const filteredActivities = useMemo(() => {
     let filtered = activities
 
     if (searchTerm) {
-      filtered = filtered.filter(activity =>
+      filtered = filtered.filter(activity => 
         activity.subject.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        activity.description?.toLowerCase().includes(searchTerm.toLowerCase())
+        activity.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        activity.type.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        activity.entityName?.toLowerCase().includes(searchTerm.toLowerCase())
       )
     }
 
@@ -140,24 +126,13 @@ export default function ActivitiesPage() {
       filtered = filtered.filter(activity => activity.status === statusFilter)
     }
 
-    setFilteredActivities(filtered)
-  }
+    return filtered
+  }, [activities, searchTerm, typeFilter, statusFilter])
 
   const handleCreateActivity = async (activityData: any) => {
     try {
-      const response = await fetch(buildApiUrl(API_ENDPOINTS.ACTIVITIES.LIST, user?.companyId || 1), {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': getAuthHeader() || ''
-        },
-        body: JSON.stringify(activityData)
-      })
-
-      if (response.ok) {
-        await fetchActivities()
-        setIsCreateDialogOpen(false)
-      }
+      await createActivityMutation.mutateAsync(activityData)
+      setIsCreateDialogOpen(false)
     } catch (error) {
       console.error('Error creating activity:', error)
     }
@@ -165,19 +140,8 @@ export default function ActivitiesPage() {
 
   const handleUpdateActivity = async (activityData: any) => {
     try {
-      const response = await fetch(buildApiUrl(API_ENDPOINTS.ACTIVITIES.UPDATE(selectedActivity?.id || 0), user?.companyId || 1), {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': getAuthHeader() || ''
-        },
-        body: JSON.stringify(activityData)
-      })
-
-      if (response.ok) {
-        await fetchActivities()
-        setSelectedActivity(null)
-      }
+      await updateActivityMutation.mutateAsync({ id: selectedActivity?.id || 0, data: activityData })
+      setSelectedActivity(null)
     } catch (error) {
       console.error('Error updating activity:', error)
     }
@@ -186,16 +150,7 @@ export default function ActivitiesPage() {
   const handleDeleteActivity = async (activityId: number) => {
     if (confirm('Are you sure you want to delete this activity?')) {
       try {
-        const response = await fetch(buildApiUrl(API_ENDPOINTS.ACTIVITIES.DELETE(activityId), user?.companyId || 1), {
-          method: 'DELETE',
-          headers: {
-            'Authorization': getAuthHeader() || ''
-          }
-        })
-
-        if (response.ok) {
-          await fetchActivities()
-        }
+        await deleteActivityMutation.mutateAsync(activityId)
       } catch (error) {
         console.error('Error deleting activity:', error)
       }
@@ -345,6 +300,18 @@ export default function ActivitiesPage() {
                               Due: {new Date(activity.dueDate).toLocaleDateString()}
                             </div>
                           )}
+                          {activity.entityName && (
+                            <div className="flex items-center gap-1">
+                              <User className="h-4 w-4" />
+                              {activity.entityType}: {activity.entityName}
+                            </div>
+                          )}
+                          {activity.assignedToName && (
+                            <div className="flex items-center gap-1">
+                              <User className="h-4 w-4" />
+                              Assigned to: {activity.assignedToName}
+                            </div>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -425,6 +392,10 @@ interface ActivityFormProps {
 }
 
 function ActivityForm({ initialData, onSave, onCancel }: ActivityFormProps) {
+  const { data: leads = [] } = useLeads()
+  const { data: contacts = [] } = useContacts()
+  const { data: deals = [] } = useDeals()
+  
   const [formData, setFormData] = useState({
     type: initialData?.type || 'TASK',
     subject: initialData?.subject || '',
@@ -432,7 +403,12 @@ function ActivityForm({ initialData, onSave, onCancel }: ActivityFormProps) {
     dueDate: initialData?.dueDate ? new Date(initialData.dueDate).toISOString().split('T')[0] : '',
     dueTime: initialData?.dueDate ? new Date(initialData.dueDate).toISOString().split('T')[1].substring(0, 5) : '',
     status: initialData?.status || 'PENDING',
-    priority: initialData?.priority || 'MEDIUM'
+    priority: initialData?.priority || 'MEDIUM',
+    entityType: initialData?.entityType || '',
+    entityId: initialData?.entityId || '',
+    assignedTo: initialData?.assignedTo || '',
+    outcome: initialData?.outcome || '',
+    duration: initialData?.duration || ''
   })
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -448,6 +424,21 @@ function ActivityForm({ initialData, onSave, onCancel }: ActivityFormProps) {
         // Default to 9 AM if no time specified
         submitData.dueDate = `${formData.dueDate}T09:00:00`
       }
+    }
+    
+    // Convert entityId to number if provided
+    if (submitData.entityId) {
+      submitData.entityId = parseInt(submitData.entityId as string)
+    }
+    
+    // Convert assignedTo to number if provided
+    if (submitData.assignedTo) {
+      submitData.assignedTo = parseInt(submitData.assignedTo as string)
+    }
+    
+    // Convert duration to number if provided
+    if (submitData.duration) {
+      submitData.duration = parseInt(submitData.duration as string)
     }
     
     // Remove dueTime from the data sent to API
@@ -509,6 +500,84 @@ function ActivityForm({ initialData, onSave, onCancel }: ActivityFormProps) {
           onChange={(e) => setFormData({...formData, description: e.target.value})}
           placeholder="Enter activity description"
           rows={3}
+        />
+      </div>
+
+      {/* Entity Linking */}
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="entityType">Link to Entity</Label>
+          <Select value={formData.entityType} onValueChange={(value) => setFormData({...formData, entityType: value, entityId: ''})}>
+            <SelectTrigger>
+              <SelectValue placeholder="Select entity type" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">No Link</SelectItem>
+              <SelectItem value="LEAD">Lead</SelectItem>
+              <SelectItem value="CONTACT">Contact</SelectItem>
+              <SelectItem value="DEAL">Deal</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="entityId">Select Entity</Label>
+          <Select value={formData.entityId.toString()} onValueChange={(value) => setFormData({...formData, entityId: value})}>
+            <SelectTrigger>
+              <SelectValue placeholder="Select entity" />
+            </SelectTrigger>
+            <SelectContent>
+              {formData.entityType === 'LEAD' && leads.map((lead) => (
+                <SelectItem key={lead.id} value={lead.id.toString()}>
+                  {lead.firstName} {lead.lastName} - {lead.company || 'No Company'}
+                </SelectItem>
+              ))}
+              {formData.entityType === 'CONTACT' && contacts.map((contact) => (
+                <SelectItem key={contact.id} value={contact.id.toString()}>
+                  {contact.firstName} {contact.lastName} - {contact.company || 'No Company'}
+                </SelectItem>
+              ))}
+              {formData.entityType === 'DEAL' && deals.map((deal) => (
+                <SelectItem key={deal.id} value={deal.id.toString()}>
+                  {deal.name} - ${deal.value}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      {/* Assignment and Additional Fields */}
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="assignedTo">Assigned To (User ID)</Label>
+          <Input
+            id="assignedTo"
+            type="number"
+            value={formData.assignedTo}
+            onChange={(e) => setFormData({...formData, assignedTo: e.target.value})}
+            placeholder="Enter user ID"
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="duration">Duration (minutes)</Label>
+          <Input
+            id="duration"
+            type="number"
+            value={formData.duration}
+            onChange={(e) => setFormData({...formData, duration: e.target.value})}
+            placeholder="Enter duration in minutes"
+          />
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="outcome">Outcome</Label>
+        <Textarea
+          id="outcome"
+          value={formData.outcome}
+          onChange={(e) => setFormData({...formData, outcome: e.target.value})}
+          placeholder="Enter activity outcome"
+          rows={2}
         />
       </div>
 

@@ -1,0 +1,66 @@
+-- Fix custom_forms table schema
+ALTER TABLE custom_forms 
+ADD COLUMN lead_id BIGINT NULL,
+ADD COLUMN contact_id BIGINT NULL,
+ADD COLUMN access_type VARCHAR(50) DEFAULT 'PUBLIC',
+ADD COLUMN submission_expiry_days INT DEFAULT 7;
+
+-- Fix is_active column default values (MySQL compatibility)
+ALTER TABLE contacts MODIFY COLUMN is_active TINYINT(1) NOT NULL DEFAULT 1;
+ALTER TABLE leads MODIFY COLUMN is_active TINYINT(1) NOT NULL DEFAULT 1;
+ALTER TABLE deals MODIFY COLUMN is_active TINYINT(1) NOT NULL DEFAULT 1;
+ALTER TABLE activities MODIFY COLUMN is_active TINYINT(1) NOT NULL DEFAULT 1;
+ALTER TABLE companies MODIFY COLUMN is_active TINYINT(1) NOT NULL DEFAULT 1;
+ALTER TABLE users MODIFY COLUMN is_active TINYINT(1) NOT NULL DEFAULT 1;
+ALTER TABLE roles MODIFY COLUMN is_active TINYINT(1) NOT NULL DEFAULT 1;
+
+-- Add missing columns to activities table if they don't exist
+ALTER TABLE activities 
+ADD COLUMN IF NOT EXISTS assigned_to BIGINT NOT NULL DEFAULT 1,
+ADD COLUMN IF NOT EXISTS assigned_by BIGINT NULL,
+ADD COLUMN IF NOT EXISTS entity_type VARCHAR(50) NULL,
+ADD COLUMN IF NOT EXISTS entity_id BIGINT NULL,
+ADD COLUMN IF NOT EXISTS company_id BIGINT NOT NULL DEFAULT 1,
+ADD COLUMN IF NOT EXISTS activity_date TIMESTAMP NULL,
+ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMP NULL;
+
+-- Add missing columns to leads table if they don't exist
+ALTER TABLE leads 
+ADD COLUMN IF NOT EXISTS company_id BIGINT NOT NULL DEFAULT 1,
+ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMP NULL;
+
+-- Add missing columns to deals table if they don't exist
+ALTER TABLE deals 
+ADD COLUMN IF NOT EXISTS company_id BIGINT NOT NULL DEFAULT 1,
+ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMP NULL;
+
+-- Add missing columns to contacts table if they don't exist
+ALTER TABLE contacts 
+ADD COLUMN IF NOT EXISTS company_id BIGINT NOT NULL DEFAULT 1,
+ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMP NULL;
+
+-- Add missing columns to reminders table if they don't exist
+ALTER TABLE reminders 
+ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'PENDING';
+
+-- Update existing records to have proper values
+UPDATE activities SET assigned_to = 1 WHERE assigned_to IS NULL;
+UPDATE activities SET company_id = 1 WHERE company_id IS NULL;
+UPDATE leads SET company_id = 1 WHERE company_id IS NULL;
+UPDATE deals SET company_id = 1 WHERE company_id IS NULL;
+UPDATE contacts SET company_id = 1 WHERE company_id IS NULL;
+
+-- Add foreign key constraints if they don't exist
+ALTER TABLE activities ADD CONSTRAINT IF NOT EXISTS fk_activities_assigned_to FOREIGN KEY (assigned_to) REFERENCES users(id);
+ALTER TABLE activities ADD CONSTRAINT IF NOT EXISTS fk_activities_company FOREIGN KEY (company_id) REFERENCES companies(id);
+ALTER TABLE leads ADD CONSTRAINT IF NOT EXISTS fk_leads_company FOREIGN KEY (company_id) REFERENCES companies(id);
+ALTER TABLE deals ADD CONSTRAINT IF NOT EXISTS fk_deals_company FOREIGN KEY (company_id) REFERENCES companies(id);
+ALTER TABLE contacts ADD CONSTRAINT IF NOT EXISTS fk_contacts_company FOREIGN KEY (company_id) REFERENCES companies(id);

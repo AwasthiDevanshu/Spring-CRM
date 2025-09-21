@@ -16,8 +16,7 @@ import { Badge } from '@/components/ui/badge'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Textarea } from '@/components/ui/textarea'
 import { useToast } from '@/hooks/use-toast'
-import { getAuthHeader } from '@/lib/auth'
-import { buildApiUrl, API_ENDPOINTS } from '@/lib/api-config'
+import { useApi } from '@/hooks/use-api'
 import { 
   Settings as SettingsIcon,
   User,
@@ -41,6 +40,7 @@ import {
 
 export default function SettingsPage() {
   const { user, isLoading, isAuthenticated } = useAuth()
+  const { companyId } = useApi()
   const router = useRouter()
   const { toast } = useToast()
   const [activeTab, setActiveTab] = useState('profile')
@@ -253,7 +253,7 @@ export default function SettingsPage() {
         },
         body: JSON.stringify({
           ...newUserData,
-          companyId: user?.companyId || 1
+          companyId: companyId
         })
       })
 

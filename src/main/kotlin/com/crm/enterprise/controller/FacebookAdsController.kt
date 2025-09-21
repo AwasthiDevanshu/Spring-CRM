@@ -14,6 +14,7 @@ import io.swagger.v3.oas.annotations.media.Schema
 import io.swagger.v3.oas.annotations.responses.ApiResponse
 import io.swagger.v3.oas.annotations.responses.ApiResponses
 import io.swagger.v3.oas.annotations.tags.Tag
+import org.slf4j.LoggerFactory
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
 
@@ -23,6 +24,8 @@ import org.springframework.web.bind.annotation.*
 class FacebookAdsController(
     private val facebookAdsService: FacebookAdsService
 ) {
+    
+    private val logger = LoggerFactory.getLogger(FacebookAdsController::class.java)
 
     @PostMapping("/integrations")
     @Operation(
@@ -52,8 +55,7 @@ class FacebookAdsController(
             val integration = facebookAdsService.createIntegration(request, companyId)
             ResponseEntity.ok(integration)
         } catch (e: Exception) {
-            println("Error creating Facebook Ads integration: ${e.message}")
-            e.printStackTrace()
+            logger.error("Error creating Facebook Ads integration: {}", e.message, e)
             ResponseEntity.badRequest().build()
         }
     }
@@ -205,8 +207,7 @@ class FacebookAdsController(
             val syncResponse = facebookAdsService.syncLeads(id, companyId)
             ResponseEntity.ok(syncResponse)
         } catch (e: Exception) {
-            println("Error syncing Facebook Ads leads: ${e.message}")
-            e.printStackTrace()
+            logger.error("Error syncing Facebook Ads leads: {}", e.message, e)
             ResponseEntity.badRequest().build()
         }
     }

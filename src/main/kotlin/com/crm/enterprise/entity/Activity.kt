@@ -5,7 +5,8 @@ import org.springframework.data.relational.core.mapping.Table
 import java.time.LocalDateTime
 
 enum class ActivityType {
-    CALL, EMAIL, MEETING, TASK, NOTE, REMINDER, OTHER
+    CALL, EMAIL, MEETING, TASK, NOTE, REMINDER, OTHER,
+    FORM_SHARED, FORM_SUBMITTED, FORM_FOLLOW_UP
 }
 
 enum class ActivityStatus {
@@ -25,21 +26,29 @@ data class Activity(
     val description: String? = null,
     val outcome: String? = null,
     val duration: Int? = null, // in minutes
-    @org.springframework.data.relational.core.mapping.Column("user_id")
-    val userId: Long,
-    @org.springframework.data.relational.core.mapping.Column("lead_id")
-    val leadId: Long? = null,
-    @org.springframework.data.relational.core.mapping.Column("contact_id")
-    val contactId: Long? = null,
-    @org.springframework.data.relational.core.mapping.Column("deal_id")
-    val dealId: Long? = null,
+    val status: ActivityStatus = ActivityStatus.PENDING,
+    val priority: ActivityPriority = ActivityPriority.MEDIUM,
+    @org.springframework.data.relational.core.mapping.Column("assigned_to")
+    val assignedTo: Long, // User who should perform the activity
+    @org.springframework.data.relational.core.mapping.Column("assigned_by")
+    val assignedBy: Long, // User who assigned the activity
+    @org.springframework.data.relational.core.mapping.Column("entity_type")
+    val entityType: String, // 'LEAD', 'CONTACT', 'DEAL', etc.
+    @org.springframework.data.relational.core.mapping.Column("entity_id")
+    val entityId: Long, // ID of the related entity
     @org.springframework.data.relational.core.mapping.Column("company_id")
     val companyId: Long,
     @org.springframework.data.relational.core.mapping.Column("activity_date")
     val activityDate: LocalDateTime = LocalDateTime.now(),
+    @org.springframework.data.relational.core.mapping.Column("due_date")
+    val dueDate: LocalDateTime? = null,
+    @org.springframework.data.relational.core.mapping.Column("completed_at")
+    val completedAt: LocalDateTime? = null,
     @org.springframework.data.relational.core.mapping.Column("created_at")
     val createdAt: LocalDateTime = LocalDateTime.now(),
     @org.springframework.data.relational.core.mapping.Column("updated_at")
-    val updatedAt: LocalDateTime = LocalDateTime.now()
+    val updatedAt: LocalDateTime = LocalDateTime.now(),
+    @org.springframework.data.relational.core.mapping.Column("deleted_at")
+    val deletedAt: LocalDateTime? = null
 )
 

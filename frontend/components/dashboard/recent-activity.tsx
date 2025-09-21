@@ -1,5 +1,6 @@
 'use client'
 
+import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -16,7 +17,6 @@ import {
   MoreHorizontal
 } from 'lucide-react'
 import { useRecentActivities } from '@/hooks/use-dashboard'
-import { useAuth } from '@/hooks/use-auth'
 import { format, formatDistanceToNow } from 'date-fns'
 import { Activity as ActivityType } from '@/types/crm'
 
@@ -99,8 +99,7 @@ function ActivitySkeleton() {
 }
 
 export function RecentActivity() {
-  const { user } = useAuth()
-  const { data: activities, isLoading, error } = useRecentActivities(Number(user?.companyId) || 1, 10)
+  const { data: activities = [], isLoading, error } = useRecentActivities()
 
   return (
     <motion.div

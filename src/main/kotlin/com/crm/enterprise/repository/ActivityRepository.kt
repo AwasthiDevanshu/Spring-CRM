@@ -25,5 +25,7 @@ interface ActivityRepository : CrudRepository<Activity, Long> {
     
     @Query("SELECT * FROM activities WHERE company_id = :companyId AND activity_date BETWEEN :startDate AND :endDate")
     fun findByCompanyIdAndDueDateBetween(companyId: Long, startDate: LocalDateTime, endDate: LocalDateTime): List<Activity>
+    
+    fun findByEntityTypeAndEntityIdAndTypeAndStatus(entityType: String, entityId: Long, type: String, status: ActivityStatus): List<Activity>
 }
 

@@ -4,6 +4,9 @@ import com.crm.enterprise.dto.LoginRequest
 import com.crm.enterprise.dto.LoginResponse
 import com.crm.enterprise.dto.UserResponse
 import com.crm.enterprise.service.UserService
+import com.crm.enterprise.util.JwtUtils
+import com.crm.enterprise.util.RequestUtils
+import jakarta.servlet.http.HttpServletRequest
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.Parameter
 import io.swagger.v3.oas.annotations.media.Content
@@ -14,12 +17,15 @@ import io.swagger.v3.oas.annotations.tags.Tag
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
 import java.time.LocalDateTime
+import java.util.*
 
 @RestController
 @RequestMapping("/api/auth")
 @Tag(name = "Authentication", description = "Authentication and user management endpoints")
 class AuthController(
-    private val userService: UserService
+    private val userService: UserService,
+    private val jwtUtils: JwtUtils,
+    private val requestUtils: RequestUtils
 ) {
 
     @PostMapping("/login")
@@ -56,7 +62,7 @@ class AuthController(
             
             // For demo purposes, accept any password
             // In production, you would verify the password hash
-            val token = "jwt-token-${System.currentTimeMillis()}"
+            val token = generateJwtToken(user)
             
             ResponseEntity.ok(
                 LoginResponse(
@@ -92,23 +98,63 @@ class AuthController(
     )
     fun getCurrentUser(
         @Parameter(description = "JWT Bearer token", required = true)
-        @RequestHeader("Authorization") token: String
+        request: HttpServletRequest
     ): ResponseEntity<UserResponse> {
         return try {
-            // Simple token validation - in production, use JWT validation
-            if (!token.startsWith("Bearer jwt-token-")) {
+            val companyId = requestUtils.extractCompanyIdFromToken(request)
+            val userId = requestUtils.extractUserIdFromToken(request)
+            
+            if (companyId == null || userId == null) {
                 return ResponseEntity.status(401).build()
             }
 
-            // For demo, return the first user
-            val users = userService.findAll()
-            if (users.isEmpty()) {
-                return ResponseEntity.status(401).build()
+            // Get user by ID
+            val user = userService.findById(userId)
+            if (user == null) {
+                return ResponseEntity.status(404).build()
             }
 
-            ResponseEntity.ok(userService.toUserResponse(users.first()))
+            ResponseEntity.ok(userService.toUserResponse(user))
         } catch (e: Exception) {
             ResponseEntity.status(401).build()
+        }
+    }
+
+    @PostMapping("/logout")
+    @Operation(
+        summary = "User Logout",
+        description = "Logout user and invalidate session/token"
+    )
+    @ApiResponses(
+        value = [
+            ApiResponse(
+                responseCode = "200",
+                description = "Logout successful"
+            ),
+            ApiResponse(
+                responseCode = "400",
+                description = "Logout failed"
+            )
+        ]
+    )
+    fun logout(): ResponseEntity<Map<String, String>> {
+        return try {
+            // In a production environment, you would:
+            // 1. Add the token to a blacklist
+            // 2. Invalidate the session
+            // 3. Clear any server-side session data
+            
+            // For now, we'll just return a success response
+            // The client will handle token removal
+            ResponseEntity.ok(mapOf(
+                "success" to "true",
+                "message" to "Logout successful"
+            ))
+        } catch (e: Exception) {
+            ResponseEntity.badRequest().body(mapOf(
+                "success" to "false",
+                "message" to "Logout failed: ${e.message}"
+            ))
         }
     }
 
@@ -121,5 +167,25 @@ class AuthController(
         } catch (e: Exception) {
             ResponseEntity.status(500).build()
         }
+    }
+
+    private fun generateJwtToken(user: com.crm.enterprise.entity.User): String {
+        val now = Date()
+        val expiration = Date(now.time + 24 * 60 * 60 * 1000) // 24 hours
+
+        return io.jsonwebtoken.Jwts.builder()
+            .setSubject(user.username)
+            .setIssuedAt(now)
+            .setExpiration(expiration)
+            .claim("userId", user.id)
+            .claim("username", user.username)
+            .claim("email", user.email)
+            .claim("companyId", user.companyId)
+            .claim("firstName", user.firstName)
+            .claim("lastName", user.lastName)
+            .claim("isSuperuser", user.isSuperuser)
+            .claim("isCompanyAdmin", user.isCompanyAdmin)
+            .signWith(jwtUtils.key, io.jsonwebtoken.SignatureAlgorithm.HS256)
+            .compact()
     }
 }

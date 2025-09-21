@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { motion } from 'framer-motion'
+import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
@@ -24,11 +25,43 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
-import { useDebounce } from '@/hooks/use-debounce'
+import { useDebounce } from '@/lib/debounce'
+import { useAuth } from '@/hooks/use-auth'
 
 export function DashboardHeader() {
   const [searchQuery, setSearchQuery] = useState('')
   const debouncedSearch = useDebounce(searchQuery, 300)
+  const router = useRouter()
+  const { user } = useAuth()
+
+  const handleSearch = (query: string) => {
+    if (query.trim()) {
+      // Navigate to a search results page or implement global search
+      router.push(`/search?q=${encodeURIComponent(query)}`)
+    }
+  }
+
+  const handleAddLead = () => {
+    router.push('/leads')
+  }
+
+  const handleFilter = () => {
+    // Implement filter functionality
+    console.log('Filter clicked')
+  }
+
+  const handleDownload = () => {
+    // Implement download functionality
+    console.log('Download clicked')
+  }
+
+  const handleUpload = () => {
+    router.push('/import')
+  }
+
+  const handleSettings = () => {
+    router.push('/settings')
+  }
 
   return (
     <motion.div
@@ -54,25 +87,30 @@ export function DashboardHeader() {
             placeholder="Search anything..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                handleSearch(searchQuery)
+              }
+            }}
             className="pl-10 w-80"
           />
         </div>
 
         {/* Quick Actions */}
         <div className="flex items-center space-x-2">
-          <Button variant="outline" size="icon">
+          <Button variant="outline" size="icon" onClick={handleFilter}>
             <Filter className="h-4 w-4" />
           </Button>
           
-          <Button variant="outline" size="icon">
+          <Button variant="outline" size="icon" onClick={handleDownload}>
             <Download className="h-4 w-4" />
           </Button>
           
-          <Button variant="outline" size="icon">
+          <Button variant="outline" size="icon" onClick={handleUpload}>
             <Upload className="h-4 w-4" />
           </Button>
 
-          <Button>
+          <Button onClick={handleAddLead}>
             <Plus className="mr-2 h-4 w-4" />
             Add Lead
           </Button>

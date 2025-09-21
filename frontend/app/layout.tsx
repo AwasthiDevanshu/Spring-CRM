@@ -5,6 +5,8 @@ import { ThemeProvider } from '@/components/theme-provider'
 import { QueryProvider } from '@/components/query-provider'
 import { Toaster } from '@/components/ui/sonner'
 import { ErrorBoundary } from '@/components/error-boundary'
+import { ChatbotProvider } from '@/contexts/chatbot-context'
+import AdvancedChatbot from '@/components/chatbot/advanced-chatbot'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -39,8 +41,11 @@ export default function RootLayout({
             disableTransitionOnChange
           >
             <QueryProvider>
-              {children}
-              <Toaster position="top-right" richColors />
+              <ChatbotProvider>
+                {children}
+                <AdvancedChatbot />
+                <Toaster position="top-right" richColors />
+              </ChatbotProvider>
             </QueryProvider>
           </ThemeProvider>
         </ErrorBoundary>

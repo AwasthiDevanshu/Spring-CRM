@@ -20,7 +20,8 @@ data class Contact(
     val notes: String? = null,
     val assignedUserId: Long? = null,
     val createdAt: LocalDateTime = LocalDateTime.now(),
-    val updatedAt: LocalDateTime = LocalDateTime.now()
+    val updatedAt: LocalDateTime = LocalDateTime.now(),
+    val deletedAt: LocalDateTime? = null
 ) {
     val fullName: String
         get() = "$firstName $lastName"

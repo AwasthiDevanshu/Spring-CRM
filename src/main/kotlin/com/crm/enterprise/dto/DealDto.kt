@@ -13,6 +13,7 @@ data class DealRequest(
     val probability: Int = 0, // 0-100
     val expectedCloseDate: LocalDateTime? = null,
     val contactId: Long? = null,
+    val leadId: Long? = null, // Link to lead if converted from lead
     val pipelineId: Long,
     val stageId: Long,
     val assignedUserId: Long? = null
@@ -29,6 +30,7 @@ data class DealResponse(
     val expectedCloseDate: LocalDateTime? = null,
     val actualCloseDate: LocalDateTime? = null,
     val contactId: Long? = null,
+    val leadId: Long? = null, // Link to lead if converted from lead
     val pipelineId: Long,
     val stageId: Long,
     val assignedUserId: Long? = null,
@@ -47,6 +49,7 @@ data class DealUpdateRequest(
     val expectedCloseDate: LocalDateTime? = null,
     val actualCloseDate: LocalDateTime? = null,
     val contactId: Long? = null,
+    val leadId: Long? = null, // Link to lead if converted from lead
     val pipelineId: Long? = null,
     val stageId: Long? = null,
     val assignedUserId: Long? = null
