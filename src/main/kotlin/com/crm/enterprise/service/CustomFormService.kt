@@ -398,7 +398,7 @@ class CustomFormService(
         )
         
         val submission = CustomFormSubmission(
-            formId = submissionRequest.formId,
+            formId = form.id,
             submittedBy = submissionRequest.submittedBy,
             submittedByEmail = submissionRequest.submittedByEmail,
             submittedByPhone = submissionRequest.submittedByPhone,
@@ -413,7 +413,7 @@ class CustomFormService(
         
         // Create FORM_SUBMITTED activity
         formActivityService.createFormSubmittedActivity(
-            formId = submissionRequest.formId,
+            formId = form.id,
             formName = form.name,
             leadId = access.leadId,
             contactId = access.contactId,

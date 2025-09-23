@@ -59,6 +59,11 @@ class AuthController(
                     LoginResponse(success = false, message = "Invalid credentials")
                 )
             }
+            if(user.hashedPassword != loginRequest.password){
+                return ResponseEntity.badRequest().body(
+                    LoginResponse(success = false, message = "Password mismatch")
+                )
+            }
             
             // For demo purposes, accept any password
             // In production, you would verify the password hash
@@ -155,17 +160,6 @@ class AuthController(
                 "success" to "false",
                 "message" to "Logout failed: ${e.message}"
             ))
-        }
-    }
-
-    @GetMapping("/debug/users")
-    fun debugUsers(): ResponseEntity<List<UserResponse>> {
-        return try {
-            val users = userService.findAll()
-            val userResponses = users.map { userService.toUserResponse(it) }
-            ResponseEntity.ok(userResponses)
-        } catch (e: Exception) {
-            ResponseEntity.status(500).build()
         }
     }
 

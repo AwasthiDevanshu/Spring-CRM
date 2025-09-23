@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/badge'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { CheckCircle, AlertCircle, Loader2, Upload, X } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
+import { Constants } from '@/lib/constants'
 
 interface FormField {
   id: string
@@ -68,7 +69,7 @@ export default function PublicFormSubmissionPage() {
   const fetchForm = async () => {
     try {
       setIsLoading(true)
-      const response = await fetch(`/api/custom-forms/public/access/${token}`)
+      const response = await fetch(`${Constants.NEXT_PUBLIC_API_URL}/custom-forms/public/access/${token}`)
       
       if (!response.ok) {
         if (response.status === 404) {
@@ -194,7 +195,7 @@ export default function PublicFormSubmissionPage() {
         formData.append(`file_${fieldName}`, file)
       })
 
-      const response = await fetch('/api/custom-forms/public/submit', {
+      const response = await fetch(`${Constants.NEXT_PUBLIC_API_URL}/custom-forms/public/submit`, {
         method: 'POST',
         body: formData,
         headers: {

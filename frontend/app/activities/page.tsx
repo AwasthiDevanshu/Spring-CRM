@@ -86,9 +86,9 @@ const priorities = [
 export default function ActivitiesPage() {
   const { user, isAuthenticated, isLoading } = useAuth()
   const { data: activities = [], isLoading: isLoadingActivities, error } = useActivities()
-  const { data: leads = [] } = useLeads()
-  const { data: contacts = [] } = useContacts()
-  const { data: deals = [] } = useDeals()
+  // const { data: leads = [] } = useLeads()
+  // const { data: contacts = [] } = useContacts()
+  // const { data: deals = [] } = useDeals()
   const createActivityMutation = useCreateActivity()
   const updateActivityMutation = useUpdateActivity()
   const deleteActivityMutation = useDeleteActivity()
@@ -512,7 +512,6 @@ function ActivityForm({ initialData, onSave, onCancel }: ActivityFormProps) {
               <SelectValue placeholder="Select entity type" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">No Link</SelectItem>
               <SelectItem value="LEAD">Lead</SelectItem>
               <SelectItem value="CONTACT">Contact</SelectItem>
               <SelectItem value="DEAL">Deal</SelectItem>
@@ -550,6 +549,7 @@ function ActivityForm({ initialData, onSave, onCancel }: ActivityFormProps) {
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label htmlFor="assignedTo">Assigned To (User ID)</Label>
+          { /* TODO: Convert to dropdown */ }
           <Input
             id="assignedTo"
             type="number"

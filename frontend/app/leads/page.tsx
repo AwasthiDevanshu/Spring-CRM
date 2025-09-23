@@ -43,7 +43,9 @@ import {
   CheckCircle,
   UserPlus,
   Users
-} from 'lucide-react'
+} from 'lucide-react';
+import { Constants }  from '@/lib/constants';
+import { getAuthToken } from '@/lib/auth'
 
 interface Lead {
   id: number
@@ -764,11 +766,11 @@ export default function LeadsPage() {
                         maxSubmissions: 1
                       }
                       
-                      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/crm/api'}/custom-forms/${selectedForm.id}/access`, {
+                      const response = await fetch(`${Constants.NEXT_PUBLIC_API_URL || 'http://localhost:8080/crm/api'}/custom-forms/${selectedForm.id}/access`, {
                         method: 'POST',
                         headers: {
                           'Content-Type': 'application/json',
-                          'Authorization': `Bearer ${localStorage.getItem('token')}`
+                          'Authorization': `Bearer ${getAuthToken()}`
                         },
                         body: JSON.stringify(accessData)
                       })

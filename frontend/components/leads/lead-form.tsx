@@ -49,21 +49,20 @@ interface LeadFormProps {
   initialData?: any
   onSave: (data: any) => void
   onCancel: () => void
-  companyId: number
 }
 
-const LeadForm = ({ initialData, onSave, onCancel, companyId }: LeadFormProps) => {
+const LeadForm = ({ initialData, onSave, onCancel}: LeadFormProps) => {
   const [fieldConfig, setFieldConfig] = useState<FieldConfiguration | null>(null)
   const [loading, setLoading] = useState(true)
   const { toast } = useToast()
 
   useEffect(() => {
     fetchFieldConfiguration()
-  }, [companyId])
+  })
 
   const fetchFieldConfiguration = async () => {
     try {
-      const response = await fetch(buildApiUrl(API_ENDPOINTS.CUSTOM_FIELDS.CONFIGURATION('LEAD'), companyId), {
+      const response = await fetch(buildApiUrl(API_ENDPOINTS.CUSTOM_FIELDS.CONFIGURATION('LEAD')), {
         headers: {
           'Authorization': getAuthHeader() || ''
         }

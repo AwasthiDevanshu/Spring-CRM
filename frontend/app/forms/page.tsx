@@ -92,7 +92,7 @@ export default function FormsPage() {
 
   // API hooks
   const { data: forms = [], isLoading: formsLoading, error: formsError } = useCustomForms()
-  const { data: formAccesses = [], isLoading: accessLoading } = useFormAccess(selectedForm?.id || 0)
+  const { data: formAccesses = [], isLoading: accessLoading } = useFormAccess(2)
   const createFormMutation = useCreateCustomForm()
   const updateFormMutation = useUpdateCustomForm()
   const deleteFormMutation = useDeleteCustomForm()
