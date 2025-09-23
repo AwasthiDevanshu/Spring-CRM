@@ -1,35 +1,45 @@
 package com.crm.enterprise.service
 
+import com.crm.enterprise.controller.ActivitySummaryReport
+import com.crm.enterprise.dto.ActivityRequest
+import com.crm.enterprise.dto.ActivityResponse
+import com.crm.enterprise.dto.ActivityUpdateRequest
 import com.crm.enterprise.entity.Activity
+import com.crm.enterprise.entity.ActivityType
 import com.crm.enterprise.repository.ActivityRepository
+import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Service
 import java.time.LocalDateTime
 
 @Service
 class ActivityService(
+
+    private val userService: UserService,
     private val activityRepository: ActivityRepository
 ) {
     
-    fun getActivitySummaryReport(companyId: Long, days: Int): com.crm.enterprise.controller.ActivitySummaryReport {
-        val cutoffDate = LocalDateTime.now().minusDays(days.toLong())
+    fun getActivitySummaryReport(companyId: Long, days: Int): ActivitySummaryReport {
+        val cutoffDate = LocalDateTime
+            .now()
+            .minusDays(days.toLong())
         val allActivities = activityRepository.findByCompanyId(companyId)
         val periodActivities = allActivities.filter { it.createdAt.isAfter(cutoffDate) }
         val previousPeriodActivities = allActivities.filter { 
-            it.createdAt.isAfter(cutoffDate.minusDays(days.toLong())) && 
+            it.createdAt.isAfter(cutoffDate.minusDays(days.toLong())) &&
             it.createdAt.isBefore(cutoffDate) 
         }
         
         val totalActivities = periodActivities.size
-        val callsMade = periodActivities.count { it.type == com.crm.enterprise.entity.ActivityType.CALL }
-        val emailsSent = periodActivities.count { it.type == com.crm.enterprise.entity.ActivityType.EMAIL }
-        val meetingsHeld = periodActivities.count { it.type == com.crm.enterprise.entity.ActivityType.MEETING }
+        val callsMade = periodActivities.count { it.type == ActivityType.CALL }
+        val emailsSent = periodActivities.count { it.type == ActivityType.EMAIL }
+        val meetingsHeld = periodActivities.count { it.type == ActivityType.MEETING }
         
         val previousTotalActivities = previousPeriodActivities.size
         val changePercent = if (previousTotalActivities > 0) {
             ((totalActivities - previousTotalActivities).toDouble() / previousTotalActivities) * 100
         } else 0.0
         
-        return com.crm.enterprise.controller.ActivitySummaryReport(
+        return ActivitySummaryReport(
             totalActivities = totalActivities,
             callsMade = callsMade,
             emailsSent = emailsSent,
@@ -42,51 +52,62 @@ class ActivityService(
     }
     
     fun getTotalActivitiesThisMonth(companyId: Long): Int {
-        val startOfMonth = LocalDateTime.now().withDayOfMonth(1).withHour(0).withMinute(0).withSecond(0)
+        val startOfMonth = LocalDateTime
+            .now()
+            .withDayOfMonth(1)
+            .withHour(0)
+            .withMinute(0)
+            .withSecond(0)
         return activityRepository.findByCompanyId(companyId)
             .count { it.createdAt.isAfter(startOfMonth) }
     }
     
     // Additional methods needed by ActivityController
-    fun findByCompanyId(companyId: Long): List<com.crm.enterprise.dto.ActivityResponse> {
+    fun findByCompanyId(companyId: Long): List<ActivityResponse> {
         return activityRepository.findByCompanyId(companyId)
             .map { toActivityResponse(it) }
     }
     
-    fun findByCompanyIdAndAssignedUserId(companyId: Long, assignedUserId: Long): List<com.crm.enterprise.dto.ActivityResponse> {
+    fun findByCompanyIdAndAssignedUserId(companyId: Long, assignedUserId: Long): List<ActivityResponse> {
         return activityRepository.findByCompanyId(companyId)
             .filter { it.assignedTo == assignedUserId }
             .map { toActivityResponse(it) }
     }
     
-    fun findById(id: Long, companyId: Long): com.crm.enterprise.dto.ActivityResponse? {
+    fun findById(id: Long, companyId: Long): ActivityResponse? {
         val activity = activityRepository.findById(id).orElse(null)
         return if (activity != null && activity.companyId == companyId) {
             toActivityResponse(activity)
         } else null
     }
     
-    fun createActivity(activityRequest: com.crm.enterprise.dto.ActivityRequest, companyId: Long, createdByUserId: Long): com.crm.enterprise.dto.ActivityResponse {
+    fun createActivity(activityRequest: ActivityRequest, companyId: Long, createdByUserId: Long): ActivityResponse {
+        var activityAssignedTo =  activityRequest.assignedTo;
+        if (activityAssignedTo == 0L){
+            activityAssignedTo = createdByUserId;
+        }
         val activity = Activity(
             type = activityRequest.type,
             subject = activityRequest.subject,
             description = activityRequest.description,
             outcome = activityRequest.outcome,
             duration = activityRequest.duration,
-            assignedTo = activityRequest.assignedTo ?: createdByUserId, // Default to creator if not provided
+            assignedTo = activityAssignedTo, // Default to creator if not provided
             assignedBy = createdByUserId, // Set to the user who created the activity
             entityType = activityRequest.entityType,
             entityId = activityRequest.entityId,
             companyId = companyId,
-            activityDate = if (activityRequest.dueDate != null) LocalDateTime.parse(activityRequest.dueDate) else LocalDateTime.now(),
-            dueDate = if (activityRequest.dueDate != null) LocalDateTime.parse(activityRequest.dueDate) else null
+            activityDate = if (activityRequest.dueDate != null)
+                LocalDateTime.parse(activityRequest.dueDate) else LocalDateTime.now(),
+            dueDate = if (activityRequest.dueDate != null)
+                LocalDateTime.parse(activityRequest.dueDate) else null
         )
         
         val savedActivity = activityRepository.save(activity)
         return toActivityResponse(savedActivity)
     }
     
-    fun updateActivity(id: Long, updateRequest: com.crm.enterprise.dto.ActivityUpdateRequest, companyId: Long): com.crm.enterprise.dto.ActivityResponse? {
+    fun updateActivity(id: Long, updateRequest: ActivityUpdateRequest, companyId: Long): ActivityResponse? {
         val existingActivity = activityRepository.findById(id).orElse(null)
         if (existingActivity == null || existingActivity.companyId != companyId) {
             return null
@@ -99,8 +120,10 @@ class ActivityService(
             outcome = updateRequest.outcome ?: existingActivity.outcome,
             duration = updateRequest.duration ?: existingActivity.duration,
             assignedTo = updateRequest.assignedTo ?: existingActivity.assignedTo,
-            activityDate = if (updateRequest.dueDate != null) LocalDateTime.parse(updateRequest.dueDate) else existingActivity.activityDate,
-            dueDate = if (updateRequest.dueDate != null) LocalDateTime.parse(updateRequest.dueDate) else existingActivity.dueDate,
+            activityDate = if (updateRequest.dueDate != null)
+                LocalDateTime.parse(updateRequest.dueDate) else existingActivity.activityDate,
+            dueDate = if (updateRequest.dueDate != null)
+                LocalDateTime.parse(updateRequest.dueDate) else existingActivity.dueDate,
             updatedAt = LocalDateTime.now()
         )
         
@@ -116,15 +139,17 @@ class ActivityService(
         } else false
     }
     
-    fun findOverdueActivities(companyId: Long): List<com.crm.enterprise.dto.ActivityResponse> {
+    fun findOverdueActivities(companyId: Long): List<ActivityResponse> {
         val now = LocalDateTime.now()
         return activityRepository.findByCompanyId(companyId)
             .filter { it.activityDate.isBefore(now) }
             .map { toActivityResponse(it) }
     }
     
-    private fun toActivityResponse(activity: Activity): com.crm.enterprise.dto.ActivityResponse {
-        return com.crm.enterprise.dto.ActivityResponse(
+    private fun toActivityResponse(activity: Activity): ActivityResponse {
+        val assignedByUser = userService.findByIdAndCompanyId(activity.assignedBy, activity.companyId)
+        val assignedToUser = userService.findByIdAndCompanyId(activity.assignedTo, activity.companyId)
+        return ActivityResponse(
             id = activity.id ?: 0L,
             type = activity.type,
             subject = activity.subject,
@@ -134,9 +159,9 @@ class ActivityService(
             dueDate = activity.dueDate,
             completedAt = activity.completedAt,
             assignedTo = activity.assignedTo,
-            assignedToName = null, // TODO: Fetch user name from user service
+            assignedToName = assignedToUser?.fullName,
             assignedBy = activity.assignedBy,
-            assignedByName = null, // TODO: Fetch user name from user service
+            assignedByName = assignedByUser?.fullName,
             entityType = activity.entityType,
             entityId = activity.entityId,
             entityName = null, // TODO: Fetch entity name from respective service

@@ -6,8 +6,7 @@ import java.time.LocalDateTime
 
 @Table("custom_fields")
 data class CustomField(
-    @Id
-    val id: Long? = null,
+    @Id val id: Long? = null,
     val entityType: String, // LEAD, CONTACT, DEAL, etc.
     val fieldName: String,
     val fieldLabel: String,

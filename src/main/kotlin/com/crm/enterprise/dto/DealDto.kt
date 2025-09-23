@@ -8,7 +8,7 @@ data class DealRequest(
     val name: String,
     val description: String? = null,
     val value: BigDecimal,
-    val currency: String = "USD",
+    val currency: String = "INR",
     val status: DealStatus = DealStatus.OPEN,
     val probability: Int = 0, // 0-100
     val expectedCloseDate: LocalDateTime? = null,

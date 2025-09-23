@@ -7,8 +7,7 @@ import java.time.LocalDateTime
 
 @Table("payment_reminders")
 data class PaymentReminder(
-    @Id
-    val id: Long? = null,
+    @Id val id: Long? = null,
     val dealId: Long,
     val contactId: Long? = null,
     val type: ReminderType,

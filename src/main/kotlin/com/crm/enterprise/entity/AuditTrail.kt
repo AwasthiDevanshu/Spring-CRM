@@ -6,8 +6,7 @@ import java.time.LocalDateTime
 
 @Table("audit_trails")
 data class AuditTrail(
-    @Id
-    val id: Long? = null,
+    @Id val id: Long? = null,
     val entityType: String, // 'LEAD', 'DEAL', 'CONTACT', 'ACTIVITY', 'NOTE', etc.
     val entityId: Long,
     val action: String, // 'CREATE', 'UPDATE', 'DELETE', 'VIEW', 'ASSIGN', 'STATUS_CHANGE', etc.

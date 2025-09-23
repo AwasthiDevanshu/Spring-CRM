@@ -66,11 +66,8 @@ class CompanyService(
     }
     
     fun updateCompany(id: Long, updateRequest: CompanyUpdateRequest): CompanyResponse? {
-        val existingCompany = companyRepository.findById(id).orElse(null)
-        if (existingCompany == null) {
-            return null
-        }
-        
+        val existingCompany = companyRepository.findById(id).orElse(null) ?: return null
+
         val updatedCompany = existingCompany.copy(
             name = updateRequest.name ?: existingCompany.name,
             description = updateRequest.description ?: existingCompany.description,

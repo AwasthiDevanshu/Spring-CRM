@@ -19,8 +19,7 @@ enum class ReminderPriority {
 
 @Table("reminders")
 data class Reminder(
-    @Id
-    val id: Long? = null,
+    @Id val id: Long? = null,
     val type: ReminderType,
     val title: String,
     val description: String? = null,

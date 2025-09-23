@@ -111,7 +111,7 @@ class DatabaseHandler(
         operation: String = "INSERT"
     ): Result<Long> {
         return try {
-            logger.debug("Executing $operation query: $sql with params: $params")
+            logger.debug("Executing {} query: {} with params: {}", operation, sql, params)
             
             val paramSource = MapSqlParameterSource(params)
             val keyHolder = org.springframework.jdbc.support.GeneratedKeyHolder()
@@ -151,7 +151,7 @@ class DatabaseHandler(
         operation: String = "UPDATE"
     ): Result<Int> {
         return try {
-            logger.debug("Executing $operation query: $sql with params: $params")
+            logger.debug("Executing {} query: {} with params: {}", operation, sql, params)
             
             val paramSource = MapSqlParameterSource(params)
             val rowsAffected = namedParameterJdbcTemplate.update(sql, paramSource)
@@ -182,7 +182,7 @@ class DatabaseHandler(
         operation: String = "DELETE"
     ): Result<Int> {
         return try {
-            logger.debug("Executing $operation query: $sql with params: $params")
+            logger.debug("Executing {} query: {} with params: {}", operation, sql, params)
             
             val paramSource = MapSqlParameterSource(params)
             val rowsAffected = namedParameterJdbcTemplate.update(sql, paramSource)

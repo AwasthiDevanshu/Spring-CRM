@@ -5,16 +5,20 @@ import com.crm.enterprise.repository.ActivityRepository
 import com.crm.enterprise.repository.LeadRepository
 import com.crm.enterprise.repository.ContactRepository
 import com.crm.enterprise.repository.CustomFormAccessRepository
+import com.crm.enterprise.repository.CustomFormRepository
 import com.fasterxml.jackson.databind.ObjectMapper
 import org.slf4j.LoggerFactory
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.LocalDateTime
+import kotlin.jvm.optionals.getOrDefault
+import kotlin.jvm.optionals.getOrNull
 
 @Service
 @Transactional
 class FormActivityService(
+    private val customFormRepository: CustomFormRepository,
     private val activityRepository: ActivityRepository,
     private val leadRepository: LeadRepository,
     private val contactRepository: ContactRepository,
@@ -237,11 +241,11 @@ class FormActivityService(
                 
                 if (existingFollowUp.isEmpty()) {
                     // Get form name (you might need to fetch this from form repository)
-                    val formName = "Custom Form" // TODO: Fetch actual form name
-                    
+                    val formName = customFormRepository.findById(access.formId).getOrNull()
+
                     createFormFollowUpActivity(
                         formId = access.formId,
-                        formName = formName,
+                        formName = formName?.name ?: "Custom form",
                         leadId = access.leadId,
                         contactId = access.contactId,
                         assignedTo = access.createdBy,

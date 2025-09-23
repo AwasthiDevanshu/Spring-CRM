@@ -18,8 +18,7 @@ enum class FormAccessType {
 
 @Table("custom_forms")
 data class CustomForm(
-    @Id
-    val id: Long? = null,
+    @Id val id: Long? = null,
     val name: String,
     val description: String? = null,
     val companyId: Long,

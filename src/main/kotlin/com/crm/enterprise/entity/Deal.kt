@@ -19,12 +19,11 @@ enum class PaymentStatus {
 
 @Table("deals")
 data class Deal(
-    @Id
-    val id: Long? = null,
+    @Id val id: Long? = null,
     val name: String,
     val description: String? = null,
     val value: BigDecimal,
-    val currency: String = "USD",
+    val currency: String = "INR",
     val status: DealStatus = DealStatus.OPEN,
     val probability: Int = 0, // 0-100
     val expectedCloseDate: LocalDateTime? = null,
