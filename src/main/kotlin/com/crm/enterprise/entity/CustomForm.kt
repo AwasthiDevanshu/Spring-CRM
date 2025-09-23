@@ -44,7 +44,7 @@ data class CustomForm(
 @Table("custom_form_fields")
 data class CustomFormField(
     @Id
-    val id: Long? = null,
+    val id: String? = null,
     val formId: Long,
     val name: String,
     val label: String,
@@ -59,6 +59,8 @@ data class CustomFormField(
     val createdAt: LocalDateTime = LocalDateTime.now(),
     val updatedAt: LocalDateTime = LocalDateTime.now()
 )
+
+
 
 @Table("custom_form_submissions")
 data class CustomFormSubmission(

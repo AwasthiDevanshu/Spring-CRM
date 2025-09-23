@@ -455,11 +455,10 @@ class CustomFormService(
         }
         
         val accessHistory = when {
-            leadId != null -> customFormAccessRepository.findLeadAccessHistory(formId, leadId)
+            leadId != null -> customFormAccessRepository.findByFormIdAndIsActiveTrue(formId)
             contactId != null -> customFormAccessRepository.findContactAccessHistory(formId, contactId)
             else -> emptyList()
         }
-        
         return accessHistory.map { convertAccessToDto(it) }
     }
 
