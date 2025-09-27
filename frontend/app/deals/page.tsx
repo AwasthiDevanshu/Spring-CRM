@@ -263,12 +263,13 @@ export default function DealsPage() {
             Track your sales deals and monitor their progress through the pipeline
           </p>
         </div>
-        <div className="flex items-center space-x-2">
+        { // TODO:  "Deal" button functionality
+        /* <div className="flex items-center space-x-2">
           <Button onClick={() => setIsCreateDialogOpen(true)}>
             <Plus className="mr-2 h-4 w-4" />
             Add Deal
           </Button>
-        </div>
+        </div> */}
       </div>
 
       {/* Filters */}
@@ -452,7 +453,11 @@ export default function DealsPage() {
                         className="text-red-600"
                         onClick={() => {
                           if (confirm('Are you sure you want to delete this deal?')) {
-                            deleteDealMutation.mutate(deal.id)
+                            deleteDealMutation.mutate(deal.id, {
+                              onSuccess: () => {
+                                window.location.reload() // Simple way to refresh the list after deletion
+                              }
+                            })
                           }
                         }}>
                           <Trash2 className="mr-2 h-4 w-4" />

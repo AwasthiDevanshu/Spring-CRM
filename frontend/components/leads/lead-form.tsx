@@ -58,7 +58,7 @@ const LeadForm = ({ initialData, onSave, onCancel}: LeadFormProps) => {
 
   useEffect(() => {
     fetchFieldConfiguration()
-  })
+  }, [])
 
   const fetchFieldConfiguration = async () => {
     try {
