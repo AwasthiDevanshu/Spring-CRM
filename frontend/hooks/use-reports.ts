@@ -24,7 +24,7 @@ export function useReports(days: number = 30) {
 
   const revenueForecast = useQuery({
     queryKey: ['reports', 'revenueForecast', days],
-    queryFn: () => getRevenueForecast(days),
+    queryFn: () => getRevenueForecast(),
     staleTime: 5 * 60 * 1000, // 5 minutes
   })
 
