@@ -17,7 +17,7 @@ import {
   Search, 
   Filter, 
   MoreHorizontal, 
-  DollarSign, 
+  // DollarSign, 
   TrendingUp,
   Calendar,
   User,
@@ -68,6 +68,7 @@ export default function DealsPage() {
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState('ALL')
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
   const [selectedDeal, setSelectedDeal] = useState<Deal | null>(null)
   
   // Deal form state
@@ -79,6 +80,63 @@ export default function DealsPage() {
     probability: '',
     expectedCloseDate: ''
   })
+  // Edit form state
+  const [editForm, setEditForm] = useState({
+    name: '',
+    description: '',
+    value: '',
+    status: 'PROSPECT',
+    probability: '',
+    expectedCloseDate: ''
+  })
+  // Open edit dialog and populate form
+  const openEditDialog = (deal: Deal) => {
+    setSelectedDeal(deal)
+    setEditForm({
+      name: deal.name || '',
+      description: deal.description || '',
+      value: deal.value.toString(),
+      status: deal.status || 'PROSPECT',
+      probability: deal.probability?.toString() || '',
+      expectedCloseDate: deal.expectedCloseDate ? deal.expectedCloseDate.slice(0, 10) : ''
+    })
+    setIsEditDialogOpen(true)
+  }
+
+  const closeEditDialog = () => {
+    setIsEditDialogOpen(false)
+    setSelectedDeal(null)
+  }
+
+  const handleEditFormChange = (field: string, value: string) => {
+    setEditForm(prev => ({ ...prev, [field]: value }))
+  }
+
+  const handleUpdateDeal = async () => {
+    if (!selectedDeal) return
+    if (!editForm.name || !editForm.value) {
+      alert('Please fill in required fields (Name and Value)')
+      return
+    }
+    try {
+      setIsSubmitting(true)
+      const data = {
+        name: editForm.name,
+        description: editForm.description,
+        value: parseFloat(editForm.value),
+        status: editForm.status,
+        probability: parseInt(editForm.probability) || 0,
+        expectedCloseDate: editForm.expectedCloseDate ? `${editForm.expectedCloseDate}T00:00:00` : null
+      }
+      await updateDealMutation.mutateAsync({ id: selectedDeal.id, data })
+      closeEditDialog()
+    } catch (error) {
+      console.error('Error updating deal:', error)
+      alert('Failed to update deal. Please try again.')
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   useEffect(() => {
@@ -116,8 +174,8 @@ export default function DealsPage() {
     )
   }
 
-  const formatCurrency = (value: number, currency: string = 'USD') => {
-    return new Intl.NumberFormat('en-US', {
+  const formatCurrency = (value: number, currency: string = 'INR') => {
+    return new Intl.NumberFormat('en-IN', {
       style: 'currency',
       currency: currency
     }).format(value)
@@ -159,7 +217,7 @@ export default function DealsPage() {
         value: parseFloat(dealForm.value),
         status: dealForm.status,
         probability: parseInt(dealForm.probability) || 0,
-        expectedCloseDate: dealForm.expectedCloseDate || null,
+        expectedCloseDate: dealForm.expectedCloseDate ? `${dealForm.expectedCloseDate}T00:00:00` : null,
         contactId: null,
         pipelineId: 1,
         stageId: 1,
@@ -205,12 +263,13 @@ export default function DealsPage() {
             Track your sales deals and monitor their progress through the pipeline
           </p>
         </div>
-        <div className="flex items-center space-x-2">
+        { // TODO:  "Deal" button functionality
+        /* <div className="flex items-center space-x-2">
           <Button onClick={() => setIsCreateDialogOpen(true)}>
             <Plus className="mr-2 h-4 w-4" />
             Add Deal
           </Button>
-        </div>
+        </div> */}
       </div>
 
       {/* Filters */}
@@ -276,7 +335,7 @@ export default function DealsPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Value</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
+            <span className="h-4 w-4 text-muted-foreground">₹</span>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
@@ -334,7 +393,7 @@ export default function DealsPage() {
                   <div className="flex items-center space-x-4">
                     <div className="flex-shrink-0">
                       <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
-                        <DollarSign className="h-5 w-5 text-primary" />
+                        {/* <DollarSign className="h-5 w-5 text-primary" /> */}
                       </div>
                     </div>
                     <div className="flex-1 min-w-0">
@@ -349,7 +408,7 @@ export default function DealsPage() {
                       </div>
                       <div className="flex items-center space-x-4 mt-1">
                         <div className="flex items-center text-sm text-gray-500">
-                          <DollarSign className="h-4 w-4 mr-1" />
+                          {/* <DollarSign className="h-4 w-4 mr-1" /> */}
                           {formatCurrency(deal.value, deal.currency)}
                         </div>
                         {deal.expectedCloseDate && (
@@ -376,7 +435,7 @@ export default function DealsPage() {
                     <Button variant="ghost" size="sm">
                       <Eye className="h-4 w-4" />
                     </Button>
-                    <Button variant="ghost" size="sm">
+                    <Button variant="ghost" size="sm" onClick={() => openEditDialog(deal)}>
                       <Edit className="h-4 w-4" />
                     </Button>
                     <DropdownMenu>
@@ -386,17 +445,119 @@ export default function DealsPage() {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => openEditDialog(deal)}>
                           <Edit className="mr-2 h-4 w-4" />
                           Edit
                         </DropdownMenuItem>
-                        <DropdownMenuItem className="text-red-600">
+                        <DropdownMenuItem 
+                        className="text-red-600"
+                        onClick={() => {
+                          if (confirm('Are you sure you want to delete this deal?')) {
+                            deleteDealMutation.mutate(deal.id, {
+                              onSuccess: () => {
+                                window.location.reload() // Simple way to refresh the list after deletion
+                              }
+                            })
+                          }
+                        }}>
                           <Trash2 className="mr-2 h-4 w-4" />
                           Delete
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </div>
+      {/* Edit Deal Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Edit Deal</DialogTitle>
+            <DialogDescription>
+              Update the details for this deal.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="edit-name">Deal Name *</Label>
+                <Input 
+                  id="edit-name" 
+                  placeholder="Enter deal name" 
+                  value={editForm.name}
+                  onChange={(e) => handleEditFormChange('name', e.target.value)}
+                />
+              </div>
+              <div>
+                <Label htmlFor="edit-value">Value *</Label>
+                <Input 
+                  id="edit-value" 
+                  type="number" 
+                  placeholder="0.00" 
+                  value={editForm.value}
+                  onChange={(e) => handleEditFormChange('value', e.target.value)}
+                />
+              </div>
+            </div>
+            <div>
+              <Label htmlFor="edit-description">Description</Label>
+              <Input 
+                id="edit-description" 
+                placeholder="Enter deal description" 
+                value={editForm.description}
+                onChange={(e) => handleEditFormChange('description', e.target.value)}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="edit-status">Status</Label>
+                <select 
+                  id="edit-status" 
+                  className="w-full p-2 border rounded-md"
+                  value={editForm.status}
+                  onChange={(e) => handleEditFormChange('status', e.target.value)}
+                >
+                  {dealStatuses.map(status => (
+                    <option key={status.value} value={status.value}>
+                      {status.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <Label htmlFor="edit-probability">Probability (%)</Label>
+                <Input 
+                  id="edit-probability" 
+                  type="number" 
+                  min="0" 
+                  max="100" 
+                  placeholder="0" 
+                  value={editForm.probability}
+                  onChange={(e) => handleEditFormChange('probability', e.target.value)}
+                />
+              </div>
+            </div>
+            <div>
+              <Label htmlFor="edit-expectedCloseDate">Expected Close Date</Label>
+              <Input 
+                id="edit-expectedCloseDate" 
+                type="date" 
+                value={editForm.expectedCloseDate}
+                onChange={(e) => handleEditFormChange('expectedCloseDate', e.target.value)}
+              />
+            </div>
+            <div className="flex justify-end space-x-2">
+              <Button variant="outline" onClick={closeEditDialog}>
+                Cancel
+              </Button>
+              <Button 
+                onClick={handleUpdateDeal}
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? 'Updating...' : 'Update Deal'}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
                 </div>
               ))}
             </div>

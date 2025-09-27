@@ -11,10 +11,25 @@ import java.time.LocalDateTime
 interface CustomFormAccessRepository : CrudRepository<CustomFormAccess, Long> {
     
     fun findByAccessTokenAndIsActiveTrue(accessToken: String): CustomFormAccess?
-    
-    fun findByFormIdAndLeadIdAndIsActiveTrue(formId: Long, leadId: Long): CustomFormAccess?
-    
-    fun findByFormIdAndContactIdAndIsActiveTrue(formId: Long, contactId: Long): CustomFormAccess?
+
+    @Query("""
+        SELECT * FROM custom_form_access
+        WHERE form_id = :formId AND lead_id = :leadId
+    """
+    )
+    fun findByFormIdAndLeadIdAndIsActiveTrue(
+        @Param("fromId") formId: Long,
+        @Param("leadId") leadId: Long
+    ): CustomFormAccess?
+
+    @Query("""
+        SELECT * FROM custom_form_access
+        WHERE form_id = :formId AND contact_id = :contactId
+    """
+    )
+    fun findByFormIdAndContactIdAndIsActiveTrue(
+        @Param("formId") formId: Long,
+        @Param("contactId") contactId: Long): CustomFormAccess?
 
     @Query("""
         SELECT * FROM custom_form_access 

@@ -251,7 +251,7 @@ export default function FormAccessPage() {
             <Checkbox
               id={field.name}
               checked={value}
-              onCheckedChange={(checked) => handleInputChange(field.name, checked)}
+              onChange={e => handleInputChange(field.name, e.target.checked)}
             />
             <Label htmlFor={field.name} className="text-sm">
               {field.label}

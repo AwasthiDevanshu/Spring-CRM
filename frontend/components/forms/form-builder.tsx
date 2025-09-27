@@ -207,7 +207,7 @@ export function FormBuilder({ formId, fields, onFieldsChange, onSave, onCancel }
   return (
     <div className="flex h-screen">
       {/* Field Library */}
-      <div className="w-64 bg-gray-50 p-4 border-r">
+      <div className="w-64 bg-gray-50 p-4 border-r overflow-y-auto max-h-[75vh]">
         <h3 className="font-semibold mb-4">Field Types</h3>
         <div className="space-y-2">
           {fieldTypes.map((fieldType) => {
@@ -228,7 +228,7 @@ export function FormBuilder({ formId, fields, onFieldsChange, onSave, onCancel }
       </div>
 
       {/* Form Builder */}
-      <div className="flex-1 flex">
+      <div className="flex-1 flex overflow-y-auto max-h-[80vh]">
         {/* Form Canvas */}
         <div className="flex-1 p-6">
           <div className="flex items-center justify-between mb-6">
@@ -331,7 +331,7 @@ export function FormBuilder({ formId, fields, onFieldsChange, onSave, onCancel }
 
         {/* Field Properties Panel */}
         {selectedField && (
-          <div className="w-80 bg-gray-50 p-4 border-l">
+          <div className="w-80 bg-gray-50 p-4 border-l overflow-y-auto max-h-[75vh]">
             <h3 className="font-semibold mb-4">Field Properties</h3>
             <div className="space-y-4">
               <div>

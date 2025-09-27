@@ -14,6 +14,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse
 import io.swagger.v3.oas.annotations.responses.ApiResponses
 import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.servlet.http.HttpServletRequest
+import org.slf4j.LoggerFactory
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
 
@@ -24,7 +25,8 @@ class DealController(
     private val dealService: DealService,
     private val requestUtils: RequestUtils
 ) {
-    
+    private val logger = LoggerFactory.getLogger(DealController::class.java)
+
     @PostMapping
     @Operation(
         summary = "Create New Deal",
@@ -53,9 +55,14 @@ class DealController(
             if (companyId == null) {
                 return ResponseEntity.badRequest().build()
             }
-            val deal = dealService.createDeal(dealRequest, companyId)
+            val userId = requestUtils.extractUserIdFromToken(request)
+            if (userId == null) {
+                return ResponseEntity.badRequest().build()
+            }
+            val deal = dealService.createDeal(dealRequest, companyId, userId)
             ResponseEntity.ok(deal)
         } catch (e: Exception) {
+            logger.error("Exception : ${e.cause}")
             ResponseEntity.badRequest().build()
         }
     }

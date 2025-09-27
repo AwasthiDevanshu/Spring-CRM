@@ -1,5 +1,6 @@
 package com.crm.enterprise.service
 
+import com.crm.enterprise.controller.ActivityController
 import com.crm.enterprise.controller.ActivitySummaryReport
 import com.crm.enterprise.dto.ActivityRequest
 import com.crm.enterprise.dto.ActivityResponse
@@ -7,9 +8,12 @@ import com.crm.enterprise.dto.ActivityUpdateRequest
 import com.crm.enterprise.entity.Activity
 import com.crm.enterprise.entity.ActivityType
 import com.crm.enterprise.repository.ActivityRepository
+import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Service
 import java.time.LocalDateTime
+import java.util.concurrent.ConcurrentHashMap
+import kotlin.math.log
 
 @Service
 class ActivityService(
@@ -17,7 +21,12 @@ class ActivityService(
     private val userService: UserService,
     private val activityRepository: ActivityRepository
 ) {
-    
+
+    private val logger = LoggerFactory.getLogger(ActivityController::class.java)
+
+    // TODO: Change it to local hashmap according to company id in toActivityResponse() function
+    val userMap: ConcurrentHashMap<Long, String> = ConcurrentHashMap()
+
     fun getActivitySummaryReport(companyId: Long, days: Int): ActivitySummaryReport {
         val cutoffDate = LocalDateTime
             .now()
@@ -147,8 +156,21 @@ class ActivityService(
     }
     
     private fun toActivityResponse(activity: Activity): ActivityResponse {
-        val assignedByUser = userService.findByIdAndCompanyId(activity.assignedBy, activity.companyId)
-        val assignedToUser = userService.findByIdAndCompanyId(activity.assignedTo, activity.companyId)
+        if(!userMap.containsKey(activity.assignedBy)) {
+            logger.debug("here for assign by: ${activity.assignedBy}")
+            userMap[activity.assignedBy] =
+                userService.findByIdAndCompanyId(activity.assignedBy, activity.companyId)?.fullName ?: ""
+        }
+        if(!userMap.containsKey(activity.assignedTo)) {
+            logger.debug("here for assign to: ${activity.assignedTo}")
+
+            userMap[activity.assignedTo] =
+                userService.findByIdAndCompanyId(activity.assignedTo, activity.companyId)?.fullName ?: ""
+        }
+
+
+        val assignedByUser = userMap.get(activity.assignedBy)
+        val assignedToUser = userMap.get(activity.assignedTo)
         return ActivityResponse(
             id = activity.id ?: 0L,
             type = activity.type,
@@ -159,9 +181,9 @@ class ActivityService(
             dueDate = activity.dueDate,
             completedAt = activity.completedAt,
             assignedTo = activity.assignedTo,
-            assignedToName = assignedToUser?.fullName,
+            assignedToName = assignedToUser,
             assignedBy = activity.assignedBy,
-            assignedByName = assignedByUser?.fullName,
+            assignedByName = assignedByUser,
             entityType = activity.entityType,
             entityId = activity.entityId,
             entityName = null, // TODO: Fetch entity name from respective service

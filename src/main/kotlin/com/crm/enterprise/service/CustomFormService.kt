@@ -60,7 +60,7 @@ class CustomFormService(
                 placeholder = fieldDto.placeholder,
                 helpText = fieldDto.helpText,
                 options = fieldDto.options,
-                validation = fieldDto.validation,
+                validation =  ObjectMapper().writeValueAsString(fieldDto.validation),
                 order = fieldDto.order,
                 isActive = fieldDto.isActive
             )
@@ -115,7 +115,7 @@ class CustomFormService(
                 placeholder = fieldDto.placeholder,
                 helpText = fieldDto.helpText,
                 options = fieldDto.options,
-                validation = fieldDto.validation,
+                validation = ObjectMapper().writeValueAsString(fieldDto.validation),
                 order = fieldDto.order,
                 isActive = fieldDto.isActive
             )
@@ -135,7 +135,7 @@ class CustomFormService(
         val forms = customFormRepository.findByCompanyIdAndDeletedAtIsNull(companyId)
         return forms.map { form ->
             val fields = customFormFieldRepository.findByFormIdOrderByOrderAsc(form.id!!)
-            val submissionCount = customFormRepository.countSubmissionsByFormId(form.id!!)
+            val submissionCount = customFormRepository.countSubmissionsByFormId(form.id)
             convertToDto(form, fields, submissionCount)
         }
     }
@@ -455,9 +455,9 @@ class CustomFormService(
         }
         
         val accessHistory = when {
-            leadId != null -> customFormAccessRepository.findByFormIdAndIsActiveTrue(formId)
+            leadId != null -> customFormAccessRepository.findLeadAccessHistory(formId, leadId)
             contactId != null -> customFormAccessRepository.findContactAccessHistory(formId, contactId)
-            else -> emptyList()
+            else ->customFormAccessRepository.findByFormIdAndIsActiveTrue(formId)
         }
         return accessHistory.map { convertAccessToDto(it) }
     }
@@ -640,7 +640,7 @@ class CustomFormService(
                     placeholder = field.placeholder,
                     helpText = field.helpText,
                     options = field.options,
-                    validation = field.validation,
+                    validation = ObjectMapper().readValue(field.validation, Validation::class.java),
                     order = field.order,
                     isActive = field.isActive
                 )
