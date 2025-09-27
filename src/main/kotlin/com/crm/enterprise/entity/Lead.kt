@@ -1,6 +1,7 @@
 package com.crm.enterprise.entity
 
 import org.springframework.data.annotation.Id
+import org.springframework.data.relational.core.mapping.Column
 import org.springframework.data.relational.core.mapping.Table
 import java.time.LocalDateTime
 
@@ -14,33 +15,23 @@ enum class LeadSource {
 
 @Table("leads")
 data class Lead(
-    @Id
-    val id: Long? = null,
-    @org.springframework.data.relational.core.mapping.Column("first_name")
-    val firstName: String,
-    @org.springframework.data.relational.core.mapping.Column("last_name")
-    val lastName: String,
+    @Id val id: Long? = null,
+    @Column("first_name") val firstName: String,
+    @Column("last_name") val lastName: String,
     val email: String,
     val phone: String? = null,
     val company: String? = null,
-    @org.springframework.data.relational.core.mapping.Column("job_title")
-    val jobTitle: String? = null,
+    @Column("job_title") val jobTitle: String? = null,
     val status: LeadStatus = LeadStatus.NEW,
     val source: LeadSource = LeadSource.OTHER,
     val score: Int = 0,
     val notes: String? = null,
-    @org.springframework.data.relational.core.mapping.Column("assigned_user_id")
-    val assignedUserId: Long? = null,
-    @org.springframework.data.relational.core.mapping.Column("company_id")
-    val companyId: Long,
-    @org.springframework.data.relational.core.mapping.Column("created_by_id")
-    val createdById: Long = 1L, // Default to admin user
-    @org.springframework.data.relational.core.mapping.Column("created_at")
-    val createdAt: LocalDateTime = LocalDateTime.now(),
-    @org.springframework.data.relational.core.mapping.Column("updated_at")
-    val updatedAt: LocalDateTime = LocalDateTime.now(),
-    @org.springframework.data.relational.core.mapping.Column("deleted_at")
-    val deletedAt: LocalDateTime? = null
+    @Column("assigned_user_id") val assignedUserId: Long? = null,
+    @Column("company_id") val companyId: Long,
+    @Column("created_by_id") val createdById: Long = 1L, // Default to admin user
+    @Column("created_at") val createdAt: LocalDateTime = LocalDateTime.now(),
+    @Column("updated_at") val updatedAt: LocalDateTime = LocalDateTime.now(),
+    @Column("deleted_at") val deletedAt: LocalDateTime? = null
 ) {
     val fullName: String
         get() = "$firstName $lastName"

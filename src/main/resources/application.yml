@@ -12,7 +12,7 @@ spring:
     driver-class-name: com.mysql.cj.jdbc.Driver
     hikari:
       # Connection Pool Settings - Reduced to prevent "too many connections" error
-      maximum-pool-size: 5
+      maximum-pool-size: 10
       minimum-idle: 1
       idle-timeout: 300000
       connection-timeout: 20000

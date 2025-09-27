@@ -37,10 +37,11 @@ import {
   Eye,
   EyeOff
 } from 'lucide-react'
+import { getAuthHeader } from '@/lib/auth'
 
 export default function SettingsPage() {
   const { user, isLoading, isAuthenticated } = useAuth()
-  const { companyId } = useApi()
+  // const { companyId } = useApi()
   const router = useRouter()
   const { toast } = useToast()
   const [activeTab, setActiveTab] = useState('profile')
@@ -133,7 +134,7 @@ export default function SettingsPage() {
   const fetchUsers = async () => {
     setIsLoadingUsers(true)
     try {
-      const response = await fetch('http://localhost:8080/crm/api/auth/debug/users', {
+      const response = await fetch('http://localhost:8080/crm/api/users', {
         headers: {
           'Authorization': getAuthHeader() || ''
         }
@@ -253,7 +254,6 @@ export default function SettingsPage() {
         },
         body: JSON.stringify({
           ...newUserData,
-          companyId: companyId
         })
       })
 

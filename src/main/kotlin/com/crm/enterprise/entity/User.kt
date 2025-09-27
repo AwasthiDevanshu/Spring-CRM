@@ -6,8 +6,7 @@ import java.time.LocalDateTime
 
 @Table("users")
 data class User(
-    @Id
-    val id: Long? = null,
+    @Id val id: Long? = null,
     val email: String,
     val username: String,
     val hashedPassword: String,

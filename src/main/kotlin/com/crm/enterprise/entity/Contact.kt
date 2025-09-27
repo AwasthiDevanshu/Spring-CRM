@@ -6,8 +6,7 @@ import java.time.LocalDateTime
 
 @Table("contacts")
 data class Contact(
-    @Id
-    val id: Long? = null,
+    @Id val id: Long? = null,
     val firstName: String,
     val lastName: String,
     val email: String,

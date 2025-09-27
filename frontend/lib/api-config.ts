@@ -152,7 +152,7 @@ export const API_ENDPOINTS = {
 } as const
 
 // Helper function to build full URL
-export function buildApiUrl(endpoint: string, companyId?: number): string {
+export function buildApiUrl(endpoint: string): string {
   const baseUrl = API_CONFIG.BASE_URL
   const url = `${baseUrl}${endpoint}`
   

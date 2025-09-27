@@ -9,10 +9,13 @@ import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.LocalDateTime
 import java.util.*
+import kotlin.jvm.optionals.getOrNull
 
 @Service
 @Transactional
 class CustomFormService(
+    private val leadRepository: LeadRepository,
+    private val contactRepository: ContactRepository,
     private val customFormRepository: CustomFormRepository,
     private val customFormFieldRepository: CustomFormFieldRepository,
     private val customFormSubmissionRepository: CustomFormSubmissionRepository,
@@ -395,7 +398,7 @@ class CustomFormService(
         )
         
         val submission = CustomFormSubmission(
-            formId = submissionRequest.formId,
+            formId = form.id,
             submittedBy = submissionRequest.submittedBy,
             submittedByEmail = submissionRequest.submittedByEmail,
             submittedByPhone = submissionRequest.submittedByPhone,
@@ -410,7 +413,7 @@ class CustomFormService(
         
         // Create FORM_SUBMITTED activity
         formActivityService.createFormSubmittedActivity(
-            formId = submissionRequest.formId,
+            formId = form.id,
             formName = form.name,
             leadId = access.leadId,
             contactId = access.contactId,
@@ -452,11 +455,10 @@ class CustomFormService(
         }
         
         val accessHistory = when {
-            leadId != null -> customFormAccessRepository.findLeadAccessHistory(formId, leadId)
+            leadId != null -> customFormAccessRepository.findByFormIdAndIsActiveTrue(formId)
             contactId != null -> customFormAccessRepository.findContactAccessHistory(formId, contactId)
             else -> emptyList()
         }
-        
         return accessHistory.map { convertAccessToDto(it) }
     }
 
@@ -566,21 +568,24 @@ class CustomFormService(
             .orElseThrow { RuntimeException("Form not found") }
         
         // Get phone number from lead or contact
-        val phone = when {
-            access.leadId != null -> {
-                // Get lead phone - you'll need to inject LeadRepository
-                null // TODO: Implement lead phone retrieval
-            }
-            access.contactId != null -> {
-                // Get contact phone - you'll need to inject ContactRepository
-                null // TODO: Implement contact phone retrieval
-            }
-            else -> null
+        var phone = ""
+        if(access.leadId != null) {
+            // Get lead phone - you'll need to inject LeadRepository
+            val lead: Lead = leadRepository.findById(access.leadId).getOrNull()!!
+            phone = lead.phone ?: ""
+        }
+        if(phone == "" && access.contactId != null) {
+            // Get lead phone - you'll need to inject LeadRepository
+            val contact: Contact = contactRepository.findById(access.contactId).getOrNull()!!
+            phone = contact.phone ?: ""
+        }
+
+        if(phone == ""){
+            return null;
         }
         
-        return phone?.let { phoneNumber ->
-            whatsAppFormService.generateFormShareWhatsAppUrl(
-                phone = phoneNumber,
+        return whatsAppFormService.generateFormShareWhatsAppUrl(
+                phone = phone,
                 formName = form.name,
                 formDescription = form.description,
                 accessToken = access.accessToken,
@@ -588,7 +593,7 @@ class CustomFormService(
                 contactId = access.contactId,
                 baseUrl = baseUrl
             )
-        }
+
     }
 
     private fun convertAccessToDto(access: CustomFormAccess): CustomFormAccessDto {

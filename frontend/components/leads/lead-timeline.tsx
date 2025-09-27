@@ -34,10 +34,10 @@ interface Note {
 
 interface LeadTimelineProps {
   leadId: number
-  companyId: number
+
 }
 
-export function LeadTimeline({ leadId, companyId }: LeadTimelineProps) {
+export function LeadTimeline({ leadId }: LeadTimelineProps) {
   const [notes, setNotes] = useState<Note[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [newNote, setNewNote] = useState('')
@@ -77,7 +77,7 @@ export function LeadTimeline({ leadId, companyId }: LeadTimelineProps) {
     if (!newNote.trim()) return
 
     try {
-      const response = await fetch(`http://localhost:8080/crm/api/notes?companyId=${companyId}&userId=1`, {
+      const response = await fetch(`http://localhost:8080/crm/api/notes`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -118,7 +118,7 @@ export function LeadTimeline({ leadId, companyId }: LeadTimelineProps) {
     if (!editContent.trim()) return
 
     try {
-      const response = await fetch(`http://localhost:8080/crm/api/notes/${noteId}?companyId=${companyId}`, {
+      const response = await fetch(`http://localhost:8080/crm/api/notes/${noteId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -157,7 +157,7 @@ export function LeadTimeline({ leadId, companyId }: LeadTimelineProps) {
   const handleDeleteNote = async (noteId: number) => {
     if (confirm('Are you sure you want to delete this note?')) {
       try {
-        const response = await fetch(`http://localhost:8080/crm/api/notes/${noteId}?companyId=${companyId}`, {
+        const response = await fetch(`http://localhost:8080/crm/api/notes/${noteId}`, {
           method: 'DELETE',
           headers: {
             'Authorization': getAuthHeader() || ''

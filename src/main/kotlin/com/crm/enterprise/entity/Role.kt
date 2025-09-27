@@ -6,8 +6,7 @@ import java.time.LocalDateTime
 
 @Table("roles")
 data class Role(
-    @Id
-    val id: Long? = null,
+    @Id val id: Long? = null,
     val name: String,
     val description: String? = null,
     val permissions: String? = null, // JSON string of permissions

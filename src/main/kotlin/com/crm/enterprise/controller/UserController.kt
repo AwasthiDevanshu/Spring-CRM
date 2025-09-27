@@ -14,7 +14,7 @@ import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
 
 @RestController
-@RequestMapping("/crm/api/users")
+@RequestMapping("/api/users")
 @Tag(name = "User Management", description = "APIs for managing users within a company")
 class UserController(
     private val userService: UserService,

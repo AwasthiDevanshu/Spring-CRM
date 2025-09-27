@@ -31,7 +31,7 @@ data class CustomFormDto(
 )
 
 data class CustomFormFieldDto(
-    val id: Long? = null,
+    val id: String? = null,
     val formId: Long? = null,
     val name: String,
     val label: String,

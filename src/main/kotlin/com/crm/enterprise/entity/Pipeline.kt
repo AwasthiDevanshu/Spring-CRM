@@ -6,8 +6,7 @@ import java.time.LocalDateTime
 
 @Table("pipelines")
 data class Pipeline(
-    @Id
-    val id: Long? = null,
+    @Id val id: Long? = null,
     val name: String,
     val description: String? = null,
     val isDefault: Boolean = false,

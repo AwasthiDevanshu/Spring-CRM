@@ -18,8 +18,7 @@ enum class FormAccessType {
 
 @Table("custom_forms")
 data class CustomForm(
-    @Id
-    val id: Long? = null,
+    @Id val id: Long? = null,
     val name: String,
     val description: String? = null,
     val companyId: Long,
@@ -45,7 +44,7 @@ data class CustomForm(
 @Table("custom_form_fields")
 data class CustomFormField(
     @Id
-    val id: Long? = null,
+    val id: String? = null,
     val formId: Long,
     val name: String,
     val label: String,
@@ -60,6 +59,8 @@ data class CustomFormField(
     val createdAt: LocalDateTime = LocalDateTime.now(),
     val updatedAt: LocalDateTime = LocalDateTime.now()
 )
+
+
 
 @Table("custom_form_submissions")
 data class CustomFormSubmission(

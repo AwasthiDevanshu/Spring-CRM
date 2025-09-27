@@ -63,8 +63,7 @@ class PaymentReminderController(
         try {
             val companyId = requestUtils.extractCompanyIdFromToken(request)
                 ?: return ResponseEntity.badRequest().build()
-            
-            // TODO: Add authorization check to ensure user can access this deal
+
             val reminders = paymentReminderService.getPendingReminders(companyId)
                 .filter { it.dealId == dealId }
             

@@ -15,7 +15,13 @@ interface CustomFormAccessRepository : CrudRepository<CustomFormAccess, Long> {
     fun findByFormIdAndLeadIdAndIsActiveTrue(formId: Long, leadId: Long): CustomFormAccess?
     
     fun findByFormIdAndContactIdAndIsActiveTrue(formId: Long, contactId: Long): CustomFormAccess?
-    
+
+    @Query("""
+        SELECT * FROM custom_form_access 
+        WHERE form_id = :formId 
+        AND is_active = true
+        ORDER BY created_at DESC
+    """)
     fun findByFormIdAndIsActiveTrue(formId: Long): List<CustomFormAccess>
     
     fun findByCompanyIdAndIsActiveTrue(companyId: Long): List<CustomFormAccess>

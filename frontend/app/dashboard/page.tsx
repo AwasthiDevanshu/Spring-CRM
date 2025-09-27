@@ -33,10 +33,10 @@ export default function DashboardPage() {
             <DashboardHeader />
             <DashboardStats />
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-7">
-              <div className="col-span-4">
+              {/* <div className="col-span-4">
                 <DashboardCharts />
-              </div>
-              <div className="col-span-3">
+              </div> */}
+              <div className="col-span-12">
                 <RecentActivity />
               </div>
             </div>

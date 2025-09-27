@@ -7,10 +7,7 @@ import com.crm.enterprise.dto.AuditTrailSummary
 import com.crm.enterprise.entity.AuditTrail
 import com.crm.enterprise.repository.AuditTrailRepository
 import com.crm.enterprise.repository.UserRepository
-import org.springframework.data.domain.PageRequest
-import org.springframework.data.domain.Pageable
 import org.springframework.stereotype.Service
-import java.time.LocalDateTime
 
 @Service
 class AuditTrailService(
