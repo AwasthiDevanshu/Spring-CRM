@@ -3,6 +3,7 @@ package com.crm.enterprise.dto
 import com.crm.enterprise.entity.FieldType
 import com.crm.enterprise.entity.FormStatus
 import com.crm.enterprise.entity.FormAccessType
+import java.io.Serializable
 import java.time.LocalDateTime
 
 data class CustomFormDto(
@@ -40,10 +41,19 @@ data class CustomFormFieldDto(
     val placeholder: String? = null,
     val helpText: String? = null,
     val options: String? = null,
-    val validation: String? = null,
+    val validation: Validation? = null,
     val order: Int = 0,
     val isActive: Boolean = true
 )
+
+data class Validation(
+    val minLength: Long? = null,
+    val maxLength: Long? = null,
+    val pattern: String? = null,
+    val min: Long? = null,
+    val max: Long? = null
+): Serializable
+
 
 data class CustomFormSubmissionDto(
     val id: Long? = null,

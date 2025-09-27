@@ -16,7 +16,7 @@ class DealService(
     private val dealRepository: DealRepository
 ) {
     
-    fun createDeal(dealRequest: DealRequest, companyId: Long): DealResponse {
+    fun createDeal(dealRequest: DealRequest, companyId: Long, userId: Long): DealResponse {
         val deal = Deal(
             name = dealRequest.name,
             description = dealRequest.description,
@@ -29,8 +29,9 @@ class DealService(
             leadId = dealRequest.leadId,
             pipelineId = dealRequest.pipelineId,
             stageId = dealRequest.stageId,
-            assignedUserId = dealRequest.assignedUserId,
-            companyId = companyId
+            assignedToUserId = dealRequest.assignedUserId,
+            companyId = companyId,
+            assignedByUserId = userId
         )
         
         val savedDeal = dealRepository.save(deal)
@@ -87,7 +88,7 @@ class DealService(
             contactId = updateRequest.contactId ?: existingDeal.contactId,
             pipelineId = updateRequest.pipelineId ?: existingDeal.pipelineId,
             stageId = updateRequest.stageId ?: existingDeal.stageId,
-            assignedUserId = updateRequest.assignedUserId ?: existingDeal.assignedUserId,
+            assignedToUserId = updateRequest.assignedUserId ?: existingDeal.assignedToUserId,
             updatedAt = LocalDateTime.now()
         )
         
@@ -210,7 +211,7 @@ class DealService(
             leadId = deal.leadId,
             pipelineId = deal.pipelineId,
             stageId = deal.stageId,
-            assignedUserId = deal.assignedUserId,
+            assignedUserId = deal.assignedToUserId,
             companyId = deal.companyId,
             createdAt = deal.createdAt,
             updatedAt = deal.updatedAt

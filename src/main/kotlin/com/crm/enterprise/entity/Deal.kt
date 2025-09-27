@@ -32,19 +32,20 @@ data class Deal(
     val leadId: Long? = null, // Link to lead if converted from lead
     val pipelineId: Long,
     val stageId: Long,
-    val assignedUserId: Long? = null,
+    val assignedToUserId: Long? = null,
     val companyId: Long,
+    val assignedByUserId: Long? = null,
     // Payment-related fields
-    val paymentType: PaymentType = PaymentType.ONE_TIME,
-    val totalAmount: BigDecimal? = null, // Total amount for EMI/recurring
-    val installmentAmount: BigDecimal? = null, // Amount per installment
-    val installmentCount: Int? = null, // Number of installments
-    val installmentFrequency: String? = null, // MONTHLY, QUARTERLY, etc.
-    val nextPaymentDate: LocalDateTime? = null,
-    val lastPaymentDate: LocalDateTime? = null,
-    val paymentStatus: PaymentStatus = PaymentStatus.PENDING,
-    val deliveryDate: LocalDateTime? = null, // When product/service was delivered
-    val deliveryStatus: String? = null, // PENDING, DELIVERED, PARTIAL
+//    val paymentType: PaymentType = PaymentType.ONE_TIME,
+//    val totalAmount: BigDecimal? = null, // Total amount for EMI/recurring
+//    val installmentAmount: BigDecimal? = null, // Amount per installment
+//    val installmentCount: Int? = null, // Number of installments
+//    val installmentFrequency: String? = null, // MONTHLY, QUARTERLY, etc.
+//    val nextPaymentDate: LocalDateTime? = null,
+//    val lastPaymentDate: LocalDateTime? = null,
+//    val paymentStatus: PaymentStatus = PaymentStatus.PENDING,
+//    val deliveryDate: LocalDateTime? = null, // When product/service was delivered
+//    val deliveryStatus: String? = null, // PENDING, DELIVERED, PARTIAL
     val createdAt: LocalDateTime = LocalDateTime.now(),
     val updatedAt: LocalDateTime = LocalDateTime.now(),
     val deletedAt: LocalDateTime? = null

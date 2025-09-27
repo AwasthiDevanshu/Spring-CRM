@@ -50,6 +50,7 @@ class ActivityController(
         @RequestParam(required = false) page: Int? = null,
         request: HttpServletRequest
     ): ResponseEntity<List<ActivityResponse>> {
+        logger.debug("get Activity api started : $assignedUserId")
         val companyId = requestUtils.extractCompanyIdFromToken(request)
         val userId = requestUtils.extractUserIdFromToken(request)
         val isSuperuser = requestUtils.extractIsSuperuserFromToken(request)
@@ -58,7 +59,9 @@ class ActivityController(
         if (companyId == null || userId == null) {
             return ResponseEntity.badRequest().build()
         }
-            
+
+        logger.debug("get Activity api started : $assignedUserId")
+
         val activities = when {
             // If specific user requested, get their activities
             assignedUserId != null -> {
@@ -66,14 +69,19 @@ class ActivityController(
             }
             // If admin or superuser, get all company activities
             isSuperuser == true || isCompanyAdmin == true -> {
+                logger.debug("Checking is superuser : {}", assignedUserId)
                 activityService.findByCompanyId(companyId)
             }
+
             // Regular user gets only their assigned activities
             else -> {
+                logger.debug("Getting Activity List : {}", assignedUserId)
+
                 activityService.findByCompanyIdAndAssignedUserId(companyId, userId)
             }
         }
-        
+        logger.debug("get Activity api started : $assignedUserId")
+
         return ResponseEntity.ok(activities)
     }
     
