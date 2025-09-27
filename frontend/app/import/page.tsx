@@ -72,7 +72,7 @@ const importTypes = [
 
 export default function ImportPage() {
   const { user, isAuthenticated, isLoading } = useAuth()
-  const { companyId, importCsv } = useApi()
+  const {  importCsv } = useApi()
   const router = useRouter()
   const { toast } = useToast()
   const [activeTab, setActiveTab] = useState('leads')
@@ -157,10 +157,12 @@ export default function ImportPage() {
       const formData = new FormData()
       formData.append('file', file)
       formData.append('entityType', type === 'leads' ? 'LEAD' : type === 'contacts' ? 'CONTACT' : 'DEAL')
-      formData.append('companyId', String(companyId))
+      
 
-      const result = await importCsv(formData)
+      const response = await importCsv(formData)
       setUploadProgress(100)
+
+      const result = await response.json()
 
       const newImport: ImportResult = {
         id: result.id,

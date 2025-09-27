@@ -133,7 +133,7 @@ export default function ReportsPage() {
       <AppLayout>
         <div className="flex items-center justify-center h-64">
           <div className="text-center">
-            <p className="text-red-600 mb-4">Error loading reports: {error}</p>
+            <p className="text-red-600 mb-4">Error loading reports: {error?.message || 'Unknown error'}</p>
             <Button onClick={() => loadReports()}>
               <RefreshCw className="h-4 w-4 mr-2" />
               Retry
@@ -241,27 +241,27 @@ export default function ReportsPage() {
                     <div className="space-y-2">
                       <p className="text-sm text-muted-foreground">Total Leads</p>
                       <p className="text-2xl font-bold">{leadsPerformance?.totalLeads || 0}</p>
-                      <Badge variant="outline" className={leadsPerformance?.periodComparison?.changeType === 'increase' ? 'text-green-600' : 'text-red-600'}>
-                        {leadsPerformance?.periodComparison?.changePercent ? `${leadsPerformance.periodComparison.changePercent > 0 ? '+' : ''}${leadsPerformance.periodComparison.changePercent.toFixed(1)}%` : '0%'} from last period
+                      <Badge variant="outline" className={leadsPerformance?.data?.periodComparison?.changeType === 'increase' ? 'text-green-600' : 'text-red-600'}>
+                        {leadsPerformance?.data?.periodComparison?.changePercent ? `${leadsPerformance.data.periodComparison.changePercent > 0 ? '+' : ''}${leadsPerformance.data.periodComparison.changePercent.toFixed(1)}%` : '0%'} from last period
                       </Badge>
                     </div>
                   <div className="space-y-2">
                     <p className="text-sm text-muted-foreground">Conversion Rate</p>
-                    <p className="text-2xl font-bold">{leadsPerformance?.conversionRate?.toFixed(1) || 0}%</p>
+                    <p className="text-2xl font-bold">{leadsPerformance?.data?.conversionRate?.toFixed(1) || 0}%</p>
                     <Badge variant="outline" className="text-blue-600">
                       Real-time data
                     </Badge>
                   </div>
                   <div className="space-y-2">
                     <p className="text-sm text-muted-foreground">Qualified Leads</p>
-                    <p className="text-2xl font-bold">{leadsPerformance?.qualifiedLeads || 0}</p>
+                    <p className="text-2xl font-bold">{leadsPerformance?.data?.qualifiedLeads || 0}</p>
                     <Badge variant="outline" className="text-purple-600">
-                      {leadsPerformance && leadsPerformance.totalLeads > 0 ? `${((leadsPerformance.qualifiedLeads / leadsPerformance.totalLeads) * 100).toFixed(1)}%` : '0%'} of total
+                      {leadsPerformance?.data && leadsPerformance.data.totalLeads > 0 ? `${((leadsPerformance.data.qualifiedLeads / leadsPerformance.data.totalLeads) * 100).toFixed(1)}%` : '0%'} of total
                     </Badge>
                   </div>
                   <div className="space-y-2">
                     <p className="text-sm text-muted-foreground">Avg. Lead Score</p>
-                    <p className="text-2xl font-bold">{leadsPerformance?.averageLeadScore?.toFixed(0) || 0}</p>
+                    <p className="text-2xl font-bold">{leadsPerformance?.data?.averageLeadScore?.toFixed(0) || 0}</p>
                     <Badge variant="outline" className="text-orange-600">
                       Out of 100
                     </Badge>
