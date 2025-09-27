@@ -72,7 +72,7 @@ const importTypes = [
 
 export default function ImportPage() {
   const { user, isAuthenticated, isLoading } = useAuth()
-  const {  importCsv } = useApi()
+  const { importCsv } = useApi()
   const router = useRouter()
   const { toast } = useToast()
   const [activeTab, setActiveTab] = useState('leads')
